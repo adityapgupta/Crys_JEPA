@@ -1,0 +1,21 @@
+# Sync these local data artifacts separately from the Git checkout.
+# The pipeline generates cosine/strict-bank arrays when retrieval provenance is absent.
+embeddings/data/embeddings.npy
+embeddings/data/metadata.csv
+embeddings/data/candidate_embeddings.npy
+embeddings/data/candidate_metadata.csv
+reference_baselines/results/split_manifest.csv
+reference_baselines/results/candidate_labels.csv
+reference_baselines/results/candidate_reference_scores.csv
+reference_baselines/results/reference_experiment_provenance.json
+reference_baselines/results/reference_knn_indices.npy
+reference_baselines/results/reference_graph_k5.npz
+reference_baselines/results/reference_graph_k10.npz
+reference_baselines/results/reference_graph_k20.npz
+reference_baselines/results/reference_graph_k50.npz
+reference_baselines/results/candidate_knn_indices.npy
+reference_baselines/results/candidate_knn_squared_distances.npy
+reference_baselines/results/chemical_reference_indptr.npy
+reference_baselines/results/chemical_reference_indices.npy
+reference_baselines/results/validation_duplicate_pairs.csv
+reference_baselines/results/validation_unique_baseline_metrics.csv

@@ -110,3 +110,7 @@ The experiment package separates data preparation, graphs, baselines, models,
 training, evaluation, and checks. Run its commands with
 `python -m reference_baselines.<folder>.<module>`. The package README lists the
 folder layout and commands.
+
+The active study compares fixed Euclidean, cosine/angle, and Laplacian-based
+reference rules. See the [current baseline report](reference_baselines/docs/nonparametric_experiments.md).
+No neural training is required for this stage.

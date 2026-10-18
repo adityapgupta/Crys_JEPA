@@ -4,6 +4,10 @@ This folder contains reference-selection experiments, data checks, and training
 code. Full model training has not started. See
 [experiment report](docs/EXPERIMENT_REPORT.md) for current results and limits.
 
+The current phase is **fixed, non-neural baselines**. See the
+[distance, angle, and graph experiments](docs/nonparametric_experiments.md).
+Candidate-only prediction and neural model training are deferred.
+
 ## Layout
 
 ```text
@@ -343,15 +347,20 @@ protocol and thresholds 0/0.05/0.1 eV/atom are separate sensitivity checks.
 
 ## Start model training
 
-Preparation checks perform forward/backward passes but no optimizer steps. Full
-training has not been run. The first two comparisons should use candidate-only
-and reference-attention models, then GCN, GraphSAGE, MPNN, and graph transformer.
-Use the full settings grid in `configs/training.toml` for the comparison.
+This section records the earlier training preparation. It is not the active
+experiment plan. Complete the non-neural comparisons below before choosing any
+GCN or attention training runs. A candidate-only model is not required for the
+current reference-selection study.
+
+Preparation checks performed forward/backward passes but no optimizer steps.
+Full training has not been run. The neural settings in `configs/training.toml`
+are now disabled until the fixed-baseline review. Candidate-only and transformer
+models are excluded from the planned grid.
 
 Example command for one training run:
 
 ```sh
-reference_baselines/environment/bin/python -m reference_baselines.training.train --model candidate_only --seed 2026 --learning-rate 0.001
+reference_baselines/environment/bin/python -m reference_baselines.training.train --model gcn --seed 2026 --learning-rate 0.001
 ```
 
 Replace the model name with `reference_attention`, `gcn`, `graphsage`, `mpnn`, or
@@ -374,3 +383,53 @@ probabilities without reference weights. The CLI does not open test performance.
 Attention weights express learned context, not physical decomposition fractions.
 Graph layers operate on a per-query induced graph of known reference crystals.
 They do not train an atomic crystal encoder or alter the JEPA embeddings.
+
+## Distance, cosine, and graph baselines
+
+All references come from known MP20 training crystals. Generated candidates
+only query that bank. The new grid includes cosine neighbours, angle cutoffs,
+a stricter on-hull reference bank, Laplacian heat/resolvent filters, conductance
+sweeps, matched random-reference controls, and angle-gate controls. It does not
+train a neural model. Full settings and limits are in the new experiment report.
+
+On the prepared local inputs, run:
+
+```sh
+reference_baselines/environment/bin/python -m pip install -r reference_baselines/requirements/nonparametric.txt
+PYTHON=reference_baselines/environment/bin/python bash reference_baselines/cluster/run_baselines.sh
+```
+
+This reuses existing cosine retrieval when its provenance file is present. Set
+`REBUILD_RETRIEVAL=1` to rebuild it. Outputs are in
+`reference_baselines/results/nonparametric/`. The report is in
+`reference_baselines/docs/nonparametric_experiments.md`. Individual module
+commands accept `--help` where they have arguments.
+
+For a cluster, use Python 3.11 or newer and install the requirements in a cluster
+environment. Sync the data paths listed in `cluster/cluster_inputs.txt` separately
+from Git. Activate the environment and submit from the repository root:
+
+```sh
+mkdir -p reference_baselines/results/logs
+sbatch reference_baselines/cluster/baselines.slurm
+```
+
+Add the account and partition required by your cluster. This job runs fixed
+baselines, not neural training. No job has been submitted from this workspace.
+
+Long full-graph eigenvector calculations are optional and were not accepted by
+the local numerical checks. To attempt them with a larger allocation:
+
+```sh
+RUN_EIGENVECTORS=1 EIGEN_MAX_SECONDS=18000 sbatch --time=12:00:00 reference_baselines/cluster/baselines.slurm
+```
+
+These runs fail explicitly if residual, convergence, or time checks fail. The
+eigenvector-retrieval baseline is evaluated only after accepted eigenpairs exist.
+Heat and resolvent filters already use the full Laplacian without this solve.
+
+Numerical tests:
+
+```sh
+reference_baselines/environment/bin/python -m unittest discover -s tests -p test_nonparametric.py -v
+```

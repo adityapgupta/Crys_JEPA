@@ -48,7 +48,10 @@ class ReferenceLayoutTests(unittest.TestCase):
     def test_training_settings_are_available(self):
         from reference_baselines.models.reference import MODEL_NAMES
         plan = tomllib.loads((CONFIG_DIR / 'training.toml').read_text())
-        self.assertEqual(plan['models'], MODEL_NAMES)
+        self.assertTrue(set(plan['models']).issubset(MODEL_NAMES))
+        self.assertFalse(plan['enabled'])
+        self.assertNotIn('candidate_only', plan['models'])
+        self.assertNotIn('graph_transformer', plan['models'])
 
     def test_spawned_worker_resolves_package_imports(self):
         from reference_baselines.datasets.labels import hull_group, init_hull

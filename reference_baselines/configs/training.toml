@@ -1,5 +1,7 @@
-# Fixed settings for the reference-model comparison.
-models = ["candidate_only", "reference_attention", "gcn", "graphsage", "mpnn", "graph_transformer"]
+# Deferred neural settings. The active study is configs/nonparametric.toml.
+enabled = false
+status = "deferred_until_baseline_review"
+models = ["reference_attention", "gcn", "graphsage", "mpnn"]
 primary_pool = "union"
 pool_ablations = ["chemical", "knn", "intersection_fallback"]
 primary_graph_k = 10
