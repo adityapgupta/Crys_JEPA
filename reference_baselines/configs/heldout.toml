@@ -1,0 +1,28 @@
+# Fixed before opening held-out outcomes. No parameter search on test results.
+primary_method = "theta1_gate_then_original_score"
+comparator = "crys_jepa"
+selection_fraction = 0.05
+stability_threshold = 0.1
+secondary_thresholds = [0.0, 0.05]
+theta_degrees = 1
+theta_k = 10
+knn_k = 5
+graph_k = 10
+resolvent_alpha = 0.25
+resolvent_seed_k = 5
+heat_time = 1
+heat_seed_k = 5
+bootstrap_draws = 1000
+seed = 2026
+minimum_selected_per_shared_group = 5
+extreme_energy_floor = -0.5
+methods = [
+  "crys_jepa", "knn_k5", "intersection_fallback_k5",
+  "cosine_knn_raw_k5", "cosine_knn_cos_k5",
+  "cosine_intersection_fallback_k5", "theta1_gate_then_original_score",
+  "cosine_theta1_fallback_k10",
+  "euclidean_resolvent_0.25_seed_euclidean_k5",
+  "cosine_heat_1_seed_cosine_k5",
+]
+# Fixed bins, in degrees. These measure embedding proximity, not physical novelty.
+angle_bin_edges = [0.0, 1.0, 3.0, 5.0, 10.0, 20.0, 180.0]

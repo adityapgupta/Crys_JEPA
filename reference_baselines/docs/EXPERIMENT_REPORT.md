@@ -1,12 +1,42 @@
 # Reference experiments and training readiness
 
-Ready for model training with MatterSim proxy labels. No full model training or new DFT calculation has been run.
+## Current status — 18 October 2026
+
+The fixed baseline study and held-out test are complete. Neural training remains
+deferred. The main rule uses a 1-degree cosine angle filter, then the original
+Crys-JEPA score. It uses existing JEPA embeddings and known MP20 references;
+it does not need a graph or new model training.
+
+On 36,994 test candidates, each method selects 1,849 unique crystals. Original
+Crys-JEPA has 644 passing selections (34.8%); the fixed angle rule has 782 (42.3%).
+The gain is 138 crystals, or 7.46 percentage points. The paired chemical-system
+95% bootstrap interval is +3.30 to +11.25 percentage points.
+
+These are MatterSim estimates against a fixed MP2023 hull. They support this
+screening rule, not physically better references or a trained graph model. The
+rule strongly favors close embedding neighbours. Chemistry checks cover only a
+small shared subset and cannot rule out bias across the full test pool.
+
+Cross-batch duplicate checks and selected-set MP2023 novelty checks are complete.
+All 19 tests pass. No independent DFT calculation, full neural training,
+generation-loop test, or synthesis check has been run.
+
+Next: prepare a balanced DFT sample from the two selection methods and fix the
+evaluation settings before calculation. Review that evidence before choosing a
+training run. The test set is now open and cannot be reused as an unseen test
+after further tuning.
+
+See the [full test report](heldout_experiment.md) and the
+[validation baseline study](nonparametric_experiments.md).
+
+The sections below record the earlier preparation phase. Their validation results
+remain valid, but their earlier training proposal is inactive.
 
 ## Validation results
 
 A positive label means corrected MatterSim energy at most 0.1 eV/atom above the fixed MP2023 DFT hull. These are proxy results. The budget is 1% or 5% of 37,438 validation candidates.
 
-For unique results, remove repeated structures across batches in score order. Refill from the same list to give each method the same number of unique crystals. Test performance remains unused.
+For unique results, remove repeated structures across batches in score order. Refill from the same list to give each method the same number of unique crystals. Test performance was unused during this validation phase; the later fixed test is reported above.
 
 | Method | Raw positive rate, 1% | Unique positive rate, 1% | Unique positive rate, 5% |
 | --- | ---: | ---: | ---: |
@@ -38,7 +68,11 @@ The pure k=5 intersection covers only 4.3% of validation candidates. The fallbac
 - Global validation uniqueness checks cover 54,338 same-formula pairs and find 12,998 matching pairs. Baselines and training use the same greedy StructureMatcher rule.
 - Six models pass finite forward/backward, target isolation, batch isolation, reference-order invariance, empty-pool, and attention-normalization checks. Checkpoint loading and reference export pass with a temporary untrained fixture. No optimizer step is taken.
 
-## Training definition
+## Earlier training proposal — inactive
+
+This section records prototype code and the earlier proposal. It is not the
+current training plan. Candidate-only and transformer models are excluded from
+the current plan, and `../configs/training.toml` disables neural training.
 
 Models: candidate-only MLP, reference attention, weighted GCN variant, weighted GraphSAGE mean variant, edge-aware MPNN, and sparse single-head graph transformer. They are small task-specific implementations, not exact reproductions. Each graph node is one whole reference crystal, not an atom.
 
@@ -46,7 +80,9 @@ Primary pool: original chemical references union top 10 JEPA neighbours. Each ca
 
 The target is the MatterSim near-stable label. Use binary cross entropy, two learning rates, three seeds, and the fixed settings in `../configs/training.toml`. Stop on validation unique positive rate at the 5% budget. Pool and k ablations follow the primary comparison. Attention ranks context; it does not predict physical decomposition probabilities.
 
-After training, compare learned and uniform readout. Require gains over candidate-only and reference-attention models before crediting graph layers. Freeze all settings before opening test performance.
+The earlier proposal included learned-versus-uniform readout checks. It has not
+been run. Any later training plan must use the completed fixed baselines as its
+controls and reserve fresh data for an unseen test.
 
 ## Limits and next stage
 

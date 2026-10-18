@@ -2,11 +2,13 @@
 
 Current phase: fixed baselines. No candidate-only model, GCN, attention model, or transformer was trained.
 
+This document records the validation study. The later fixed test comparison is complete; see [the test report](heldout_experiment.md). Test results were opened only after the method settings were fixed. The test set is now open.
+
 ## Data and reference sources
 
 - Reference bank: 27,136 known MP20 training crystals. Every recorded reference hull distance is below 0.08 eV/atom. These are already near-stable known crystals.
 - Strict comparison bank: 11,958 of those known crystals with recorded hull distance at most 1e-8 eV/atom.
-- Generated crystals are queries. They never become reference nodes. Evaluation uses 37,438 VUN validation queries. Test outcome labels remain unused.
+- Generated crystals are queries. They never become reference nodes. This validation study uses 37,438 VUN validation queries. Test outcomes were unused during method selection.
 - Stability checks use corrected MatterSim candidate energies against the fixed MP2023 DFT hull. They are proxy labels, not new DFT results.
 
 ## What was run
@@ -62,7 +64,7 @@ Paired chemical-system bootstrap intervals are in `../results/nonparametric/vali
 - [Readable reference examples](../results/nonparametric/reference_examples.csv) show candidate IDs and the known MP20 reference IDs they use.
 - [All metrics](../results/nonparametric/validation_metrics.csv), [angle coverage](../results/nonparametric/validation_theta_coverage.csv), and [phase recall](../results/nonparametric/decomposition_recall.csv). Result files stay local.
 - [Cluster runner](../cluster/run_baselines.sh), [Slurm template](../cluster/baselines.slurm), and [input list](../cluster/cluster_inputs.txt). The runner does not submit jobs.
-- Repeat the fixed protocol on the cluster if needed. Review the gate and matched-random controls before choosing a baseline. Keep test outcomes sealed until settings are fixed.
+- The later fixed test run is in [heldout_experiment.md](heldout_experiment.md). Do not use those opened test results to tune another rule and call the result unseen.
 - GCN and graph attention are later stages. The candidate-only model is not part of the current plan.
 
 ## Sources behind the graph methods

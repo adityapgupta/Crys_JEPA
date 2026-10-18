@@ -8,6 +8,25 @@ The current phase is **fixed, non-neural baselines**. See the
 [distance, angle, and graph experiments](docs/nonparametric_experiments.md).
 Candidate-only prediction and neural model training are deferred.
 
+The fixed test comparison is complete. Its settings are in
+[heldout.toml](configs/heldout.toml). Its commands
+are separate from the validation grid, so there is no test parameter search.
+See [where we are now](docs/heldout_experiment.md#where-we-are-now--18-october-2026)
+for the results, limits, and next step. The test set is now open and cannot serve
+as an unseen set for later tuning. Independent DFT checks are next; neural
+training remains deferred.
+
+```sh
+python -m reference_baselines.evaluation.heldout freeze
+python -m reference_baselines.evaluation.heldout score
+python -m reference_baselines.evaluation.heldout structures --workers 4
+python -m reference_baselines.evaluation.heldout evaluate
+python -m reference_baselines.evaluation.heldout report
+```
+
+The run checks cross-batch uniqueness and checks selected structures against the
+full pinned MP2023 novelty bank. Outputs stay local in `results/heldout/`.
+
 ## Layout
 
 ```text
