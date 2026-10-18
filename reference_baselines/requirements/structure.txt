@@ -1,0 +1,4 @@
+pymatgen==2025.6.14
+dscribe==2.1.2
+certifi
+lmdb==1.6.2
