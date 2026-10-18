@@ -1,0 +1,23 @@
+# Fixed settings for the reference-model comparison.
+models = ["candidate_only", "reference_attention", "gcn", "graphsage", "mpnn", "graph_transformer"]
+primary_pool = "union"
+pool_ablations = ["chemical", "knn", "intersection_fallback"]
+primary_graph_k = 10
+k_ablations_after_primary_comparison = [5, 20, 50]
+hidden = 128
+layers = 2
+learning_rates = [0.001, 0.0001]
+seeds = [2026, 2027, 2028]
+batch_size = 16
+max_epochs = 50
+early_stop_patience = 5
+optimizer = "AdamW"
+weight_decay = 0.0001
+loss = "unweighted binary cross entropy on MatterSim near-stable proxy labels"
+primary_selection_metric = "validation near-stable proxy yield at top 5 percent budget, after global greedy deduplication with refill to fixed unique budget"
+secondary_metrics = ["precision top 1/10/20 percent", "chemical-system coverage", "per-turn yield", "threshold sensitivity 0/0.05/0.1 eV per atom", "Brier score"]
+test_policy = "Keep test performance unopened until model, pool, k and training settings are frozen."
+interpretation = "Attention weights rank contextual references. They are not probabilities of physical decomposition phases."
+reference_value_checks_after_training = ["Compare learned weights against uniform readout on validation with the same checkpoint", "Compare union, chemical-only and unrestricted kNN pools using identical training settings", "Require gain over both candidate-only and reference-attention models before crediting graph message passing", "Report three-seed variation; freeze settings before opening test performance"]
+physical_reference_check = "Report decomposition-phase recall separately, restricted to chemically eligible references."
+next_validation_stage = "After proxy training, validate a fixed, method-balanced selected subset with independent DFT; do not claim DFT success from these labels."

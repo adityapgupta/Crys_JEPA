@@ -97,3 +97,16 @@ Remarks
 > 2. Change hyper-parameters, e.g., ```python II_train_base.py --conf_new training.batch_size=256 training.lr=0.0001```.
 > 3. Use partial of GPUs, e.g., ```CUDA_VISIBLE_DEVICES=0,1 II_train_base.py```. Default: use all GPUs.
 > 4. The evaluation code is mainly adapted from [MatterGen](https://github.com/microsoft/mattergen) and [FlowMM](https://github.com/facebookresearch/flowmm).
+
+## Reference-selection experiments
+
+The visible code, fixed baselines, data checks, and training entry points are in
+[`reference_baselines/`](reference_baselines/README.md). See the
+[experiment report](reference_baselines/docs/EXPERIMENT_REPORT.md) for results and
+training readiness. Stability labels in these experiments use MatterSim energies;
+they are not independent DFT validation.
+
+The experiment package separates data preparation, graphs, baselines, models,
+training, evaluation, and checks. Run its commands with
+`python -m reference_baselines.<folder>.<module>`. The package README lists the
+folder layout and commands.
