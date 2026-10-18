@@ -1,0 +1,5 @@
+-r structure.txt
+numpy
+pandas
+scipy>=1.14
+torch

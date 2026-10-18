@@ -1,0 +1,16 @@
+# Fixed before inspecting the new validation outcomes.
+ks = [5, 10, 20, 50]
+theta_degrees = [1, 3, 5, 10, 20, 45]
+graph_k = 10
+diffusion_alpha = [0.25, 0.5, 0.85]
+diffusion_seed_k = [5, 10, 20]
+diffusion_max_iterations = 200
+diffusion_tolerance = 0.000001
+spectral_modes = 16
+spectral_times = [1, 3, 10]
+selection_fractions = [0.01, 0.05, 0.1, 0.2]
+stability_thresholds = [0.0, 0.05, 0.1]
+bootstrap_draws = 1000
+seed = 2026
+run_neural_training = false
+test_performance_locked = true
