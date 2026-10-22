@@ -22,4 +22,5 @@ SOURCE_PACKAGES = (
     "training",
     "checks",
     "reporting",
+    "embedding_structure",
 )

@@ -43,6 +43,7 @@ reference_baselines/
   reporting/     Report and readiness generation
   configs/       Fixed training settings
   requirements/  Python dependencies
+  embedding_structure/  Community and property analysis
   docs/          Experiment report
   paths.py       Shared input and output locations
   data/          Downloaded data (local, not staged)
@@ -452,3 +453,10 @@ Numerical tests:
 ```sh
 reference_baselines/environment/bin/python -m unittest discover -s tests -p test_nonparametric.py -v
 ```
+
+## Embedding structure analysis
+
+Community, probe, and space-group concentration experiments are described in
+[embedding_structure/README.md](embedding_structure/README.md). Dependencies are
+in `requirements/embedding_structure.txt`; outputs stay local under
+`results/embedding_structure/`.
