@@ -1,20 +1,51 @@
 # Reference-selection baselines
 
-This folder contains reference-selection experiments, data checks, and training
-code. Full model training has not started. See
-[experiment report](docs/EXPERIMENT_REPORT.md) for current results and limits.
+> **Important correction.** The old learned GNN/MPNN runs predicted candidate
+> stability. They used candidate stability labels for training or checkpoint
+> choice and are invalid for the current reference-selection question. The new
+> experiment predicts reference utility. Candidate stability comes only from
+> MatterSim relaxation. See [the new design](docs/gnn_reference_selection.md) and
+> the [cluster runbook](docs/CLUSTER_GNN_RUNBOOK.md).
+
+Current work: the clean reference-utility GNN (approach 1B + 2A). It is
+cluster-ready and has not run at full scale. See the
+[design](docs/gnn_reference_selection.md) and the
+[cluster runbook](docs/CLUSTER_GNN_RUNBOOK.md).
+
+The [pre-GNN report](docs/pre_gnn_report.md) tests formula balance, exact
+chemistry/formula quotas, same-formula pairs, and direct hull ranking. The global
+angle gain largely disappears under matched chemistry on the current test set.
+See the [progress tracker](docs/PRE_GNN_PROGRESS.md): exact encoder reproduction
+still needs the original scaler and extraction script.
+
+Full-scale reference-utility training has not started. See
+[experiment report](docs/EXPERIMENT_REPORT.md) for the older results and limits.
 
 The current phase is **fixed, non-neural baselines**. See the
 [distance, angle, and graph experiments](docs/nonparametric_experiments.md).
 Candidate-only prediction and neural model training are deferred.
+
+The [budget study](docs/budget_study.md) compares both fixed rules at 1%, 2%, 5%,
+and 7% of the same test candidates. It reports saved MatterSim results for every
+budget and separates the extra relaxation checks where coverage is complete.
+
+The [mean and reference-pool study](docs/mean_ablation.md) tests weighting and
+reference choice separately. The earlier reported 1° candidate gate used a plain
+mean, not a weighted mean. All controls use the same saved MatterSim labels.
+
+The current work studies why the angle rule helps and checks the selected crystals
+with fresh MatterSim calculations. See [the interpretation report](docs/selection_interpretation.md)
+for matched examples and embedding plots, and [fresh MatterSim validation](docs/mattersim_validation.md)
+for full energy, force, relaxation, duplicate, and novelty checks. DFT is reserved
+for final publication validation with the chemistry team.
 
 The fixed test comparison is complete. Its settings are in
 [heldout.toml](configs/heldout.toml). Its commands
 are separate from the validation grid, so there is no test parameter search.
 See [where we are now](docs/heldout_experiment.md#where-we-are-now--18-october-2026)
 for the results, limits, and next step. The test set is now open and cannot serve
-as an unseen set for later tuning. Independent DFT checks are next; neural
-training remains deferred.
+as an unseen set for later tuning. DFT is reserved for final publication checks;
+neural training remains deferred.
 
 ```sh
 python -m reference_baselines.evaluation.heldout freeze

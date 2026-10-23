@@ -1,0 +1,24 @@
+# Frozen before the reserved partition is opened. Do not edit after a full run.
+status = "cluster_ready"
+models = ["gcn", "gat", "no_graph"]
+seeds = [2026, 2027, 2028]
+hidden = 64
+layers = 2
+epochs = 20
+early_stop_patience = 4
+batch_size = 32
+learning_rate = 0.001
+weight_decay = 0.0001
+retrieval_k = 5
+train_limit = 0            # 0 means all 141,126 fit rows
+validation_limit = 0       # 0 means all 37,438 validation rows
+threads = 8
+device = "cpu"
+target = "Mapped reference appears in the saved fixed-hull decomposition of the candidate"
+loss = "Reference-level binary cross entropy"
+checkpoint_rule = "Lowest validation reference BCE; ties use the earlier epoch"
+graph_primary = "physical"
+graph_ablations = ["cosine", "self", "permuted"]
+controls = ["random_references", "uniform_weights"]
+evaluation = "Frozen checkpoint scored once on reserved rows; budgets 1, 2, 5, 7 percent"
+claim_limit = "MatterSim proxy screen, not DFT confirmation; reserved rows are an engineering holdout"

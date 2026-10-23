@@ -1,21 +1,40 @@
 # Sync these local data artifacts separately from the Git checkout.
-# The pipeline generates cosine/strict-bank arrays when retrieval provenance is absent.
+# Paths are relative to the repository root.
+# See reference_baselines/docs/CLUSTER_GNN_RUNBOOK.md.
+
+# Frozen JEPA embeddings and metadata
 embeddings/data/embeddings.npy
 embeddings/data/metadata.csv
 embeddings/data/candidate_embeddings.npy
 embeddings/data/candidate_metadata.csv
+
+# Splits and candidate tables
 reference_baselines/results/split_manifest.csv
 reference_baselines/results/candidate_labels.csv
+reference_baselines/results/candidate_decompositions.csv
 reference_baselines/results/candidate_reference_scores.csv
-reference_baselines/results/reference_experiment_provenance.json
-reference_baselines/results/reference_knn_indices.npy
-reference_baselines/results/reference_graph_k5.npz
-reference_baselines/results/reference_graph_k10.npz
-reference_baselines/results/reference_graph_k20.npz
-reference_baselines/results/reference_graph_k50.npz
-reference_baselines/results/candidate_knn_indices.npy
-reference_baselines/results/candidate_knn_squared_distances.npy
+
+# Chemical eligibility and nearest-reference retrieval
 reference_baselines/results/chemical_reference_indptr.npy
 reference_baselines/results/chemical_reference_indices.npy
+reference_baselines/results/candidate_cosine_indices.npy
+reference_baselines/results/candidate_cosine_distances.npy
+reference_baselines/results/reference_cosine_indices.npy
+reference_baselines/results/reference_cosine_distances.npy
+
+# Composition features used by the formula prior
+reference_baselines/results/reference_composition.npy
+reference_baselines/results/candidate_composition.npy
+
+# Structure-duplicate tables: one of the two options below is required.
+# Use the precomputed reserved table, or set BUILD_RESERVED_DUPLICATES=1 and
+# copy reference_baselines/data/release/exp_logs/base/mp_20/eval/ instead.
 reference_baselines/results/validation_duplicate_pairs.csv
-reference_baselines/results/validation_unique_baseline_metrics.csv
+reference_baselines/results/reference_gnn/reserved_duplicate_pairs.csv
+reference_baselines/results/reference_gnn/reserved_duplicate_audit.json
+
+# Frozen split row arrays and split protocol
+reference_baselines/results/gnn_comparison/train_rows.npy
+reference_baselines/results/gnn_comparison/validation_rows.npy
+reference_baselines/results/gnn_comparison/reserved_rows.npy
+reference_baselines/results/gnn_comparison/split_protocol.json

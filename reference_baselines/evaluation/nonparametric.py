@@ -42,11 +42,16 @@ def family(name):
 
 
 def paired_interval(selected, original, metadata, targets, seed, draws):
+    target_at = (
+        (lambda rows: targets.loc[rows].to_numpy())
+        if isinstance(targets, pd.Series)
+        else (lambda rows: targets[rows])
+    )
     a = (
         pd.DataFrame(
             {
                 "system": metadata.loc[original, "chemical_system"].to_numpy(),
-                "target": targets[original],
+                "target": target_at(original),
             }
         )
         .groupby("system")
@@ -56,7 +61,7 @@ def paired_interval(selected, original, metadata, targets, seed, draws):
         pd.DataFrame(
             {
                 "system": metadata.loc[selected, "chemical_system"].to_numpy(),
-                "target": targets[selected],
+                "target": target_at(selected),
             }
         )
         .groupby("system")
