@@ -5,9 +5,9 @@ remote Linux cluster. It does not run the experiment on this machine.
 
 Design: [gnn_reference_selection.md](gnn_reference_selection.md).
 
-Full runtime is **not measured on cluster hardware**. The job script requests 20
-hours for the whole job (all 36 runs). Measure one graph before you submit the
-full job.
+Full runtime is **not measured on cluster hardware**. The job script requests 48
+hours (`long` partition, 2-day limit) for the whole job (all 36 runs). Measure
+one graph before you submit the full job.
 
 Reference measurement on one 8-thread development CPU (macOS, not the cluster):
 
@@ -120,40 +120,45 @@ structures. Record this limit in the report.
 
 ## 4. Python environment
 
+Do not install on the login node. Build the environment with the Slurm job
+`install.sh` (CPU-only torch, temp files in `$HOME/tmp`):
+
 ```sh
-python3 -m venv .venv-gnn
-source .venv-gnn/bin/activate
-python -m pip install --upgrade pip
-python -m pip install numpy pandas scipy torch pymatgen
+sbatch install.sh
 ```
+
+The environment goes to `$HOME/venv-gnn`. Override with `VENV=...` if needed.
+Set `PYTHON_MODULE=python/3.11` if the default `python3` is older than 3.11.
+Set `RECREATE=1` to rebuild.
 
 The code uses the standard-library `tomllib` module. It needs Python 3.11 or
 later. Check:
 
 ```sh
-python -c "import sys, numpy, pandas, scipy, torch, pymatgen; print(sys.version); print(torch.__version__)"
+$HOME/venv-gnn/bin/python -c "import sys, numpy, pandas, scipy, torch, pymatgen; print(sys.version); print(torch.__version__)"
 ```
 
 The experiment runs on CPU. A GPU does not help the small per-candidate graphs.
 
 ## 5. Preflight checks
 
-Run these from the repository root, inside the environment:
+Run these from the repository root, inside an interactive job:
 
 ```sh
+export PYTHON="$HOME/venv-gnn/bin/python"
 export PYTHONPATH="$PWD"
 mkdir -p reference_baselines/results/logs
 
-python -m unittest reference_baselines.tests.test_reference_gnn -v
+"$PYTHON" -m unittest reference_baselines.tests.test_reference_gnn -v
 
-python - <<'PY'
+"$PYTHON" - <<'PY'
 import numpy as np
 for split in ("train", "validation", "reserved"):
     rows = np.load(f"reference_baselines/results/gnn_comparison/{split}_rows.npy")
     print(split, len(rows), int(rows.min()), int(rows.max()))
 PY
 
-python - <<'PY'
+"$PYTHON" - <<'PY'
 import numpy as np
 print("references", np.load("embeddings/data/embeddings.npy", mmap_mode="r").shape)
 print("candidates", np.load("embeddings/data/candidate_embeddings.npy", mmap_mode="r").shape)
@@ -176,10 +181,22 @@ All 21 tests must pass before you start the job.
 
 The order is strict. Do not open reserved labels before all checkpoints exist.
 
+### Step 0 (optional) — run graphs and pools as short jobs
+
+Both fit in 3 hours, so `normal` is enough. Submit as a chain so that prepare
+starts only after graphs succeed:
+
+```sh
+graphs_id=$(sbatch --parsable --partition=normal --time=03:00:00 \
+  --export=ALL,STAGE=graphs reference_baselines/cluster/reference_gnn.slurm)
+sbatch --partition=normal --time=03:00:00 --dependency=afterok:"$graphs_id" \
+  --export=ALL,STAGE=prepare reference_baselines/cluster/reference_gnn.slurm
+```
+
 ### Step 1 — build the graphs
 
 ```sh
-python -m reference_baselines.graphs.build_reference_graph
+"$PYTHON" -m reference_baselines.graphs.build_reference_graph
 ```
 
 Outputs `reference_baselines/results/reference_gnn/graphs/` with four `.npz`
@@ -192,7 +209,7 @@ the reference cosine arrays.
 ### Step 2 — prepare the candidate pools
 
 ```sh
-python -m reference_baselines.evaluation.reference_gnn --prepare
+"$PYTHON" -m reference_baselines.evaluation.reference_gnn --prepare --reuse-duplicates
 ```
 
 This builds the validation and reserved pool tables for the four graphs and the
@@ -212,7 +229,7 @@ Run once for each graph:
 
 ```sh
 for graph in physical cosine self permuted; do
-  python -m reference_baselines.training.train_reference_gnn --graph "$graph"
+  "$PYTHON" -m reference_baselines.training.train_reference_gnn --graph "$graph"
 done
 ```
 
@@ -234,7 +251,7 @@ directory and rerun it.
 ### Step 4 — evaluate once
 
 ```sh
-python -m reference_baselines.evaluation.reference_gnn --evaluate
+"$PYTHON" -m reference_baselines.evaluation.reference_gnn --evaluate
 ```
 
 This opens the reserved labels after the frozen-checkpoint check passes.
@@ -273,18 +290,14 @@ BUILD_RESERVED_DUPLICATES=1 STAGE=prepare bash reference_baselines/cluster/run_r
 
 ### Slurm
 
-Submit from the repository root:
+NUS account and partition are set in the job script
+(`--account=allusers --partition=long`). Submit from the repository root:
 
 ```sh
 sbatch reference_baselines/cluster/reference_gnn.slurm
 ```
 
-Add your site options to the `sbatch` command:
-
-```sh
-sbatch --account=YOUR_ACCOUNT --partition=YOUR_PARTITION \
-  reference_baselines/cluster/reference_gnn.slurm
-```
+`normal` allows only 3 hours. The full job needs `long` (up to 3 days).
 
 Logs go to `reference_baselines/results/logs/reference-gnn-%j.log`.
 
