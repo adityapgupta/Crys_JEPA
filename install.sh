@@ -58,14 +58,21 @@ python -m pip install --no-cache-dir torch \
 
 python - <<'PY'
 import sys
+from importlib.metadata import version
 import numpy, pandas, scipy, torch, pymatgen
+from pymatgen.core import Structure
 
-print("python", sys.version.split()[0])
-print("numpy", numpy.__version__)
-print("pandas", pandas.__version__)
-print("scipy", scipy.__version__)
-print("torch", torch.__version__)
-print("pymatgen", pymatgen.__version__)
+for name, module in (
+    ("python", None),
+    ("numpy", numpy),
+    ("pandas", pandas),
+    ("scipy", scipy),
+    ("torch", torch),
+    ("pymatgen", pymatgen),
+):
+    found = sys.version.split()[0] if module is None else version(name)
+    print(name, found)
+print("Structure import ok:", Structure.__name__)
 print("cuda_available", torch.cuda.is_available())
 PY
 
