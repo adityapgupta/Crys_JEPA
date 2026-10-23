@@ -1,0 +1,19 @@
+# Inference-only packages installed with --no-deps in environment/audit/.
+# That environment reads the existing environment site-packages through a .pth
+# file. This leaves the fixed baseline environment and its pinned data untouched.
+# SMACT14 rules are used explicitly. SMACT 2.7's broad dependency bounds are not
+# used to replace the working NumPy/Pymatgen stack; exercised paths pass tests.
+smact==2.7
+mattersim==1.2.5
+Deprecated==1.2.18
+wrapt==1.17.3
+loguru==0.7.3
+torch-ema==0.3
+torch-geometric==2.8.1
+torchmetrics==1.9.0
+lightning-utilities==0.15.3
+torch-runstats==0.2.0
+opt-einsum==3.4.0
+opt-einsum-fx==0.1.4
+e3nn==0.5.6
+psutil==7.2.2
