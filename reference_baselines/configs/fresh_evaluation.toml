@@ -1,0 +1,23 @@
+# Reserve future generations after the model and selection rules are frozen.
+# No new candidates have been generated under this protocol yet.
+status = "protocol_ready_collection_pending"
+generated_candidates = 40000
+batches = 40
+candidates_per_batch = 1000
+seed_start = 876000
+selection_percentages = [1, 2, 5, 7]
+primary_selection_percentage = 5
+energy_above_hull_cutoff = 0.1
+reference_bank = "Fixed Crys-JEPA MP20 training references"
+evaluation_hull = "Fixed pinned MP2023 database"
+energy_model = "Pinned MatterSim-v1.0.0-1M checkpoint"
+generator = "Original base MP20 diffusion model; checkpoint SHA256 must be recorded before generation"
+freeze_before_generation = ["generator checkpoint", "encoder checkpoint and exact scaler", "all model weights", "all ranking rules", "graph and neighbour settings", "duplicate rules", "MatterSim settings", "failure rules"]
+training_policy = "Only current train split for fitting; validation for choices; current opened test is descriptive"
+evaluation_policy = "Do not inspect new test energy labels until all settings and candidate rankings are sealed"
+unseen_structure_policy = "Before opening stability labels, exclude structures matching any previously inspected generated candidate under the fixed same-composition matcher; report exclusion counts"
+budget_denominator = "Eligible unique novel fresh candidates after fixed energy-independent filters; floor(N * fraction)"
+generation_reporting = "Report total raw generations separately from eligible screening pool; a screening gain is not a generation gain"
+duplicate_policy = "Same structural uniqueness rules for all methods; report both per-method and common-representative controls"
+required_controls = ["original mean", "formula-balanced mean", "weighted chemical mean", "fixed angle gate", "chemistry-matched selections", "same-label hull oracle separately labelled", "eventual learned model"]
+report = ["counts and pass rates", "uncertainty by chemical system", "chemical diversity", "within-chemistry and same-formula performance", "actual wall time and RAM", "failures and convergence", "novelty"]
