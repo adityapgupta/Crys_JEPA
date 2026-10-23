@@ -253,6 +253,10 @@ class ModelTests(unittest.TestCase):
                 "reference_baselines.datasets.reference_graph.decomposition_targets",
                 return_value={0: np.array([], dtype=np.int64)},
             ),
+            mock.patch(
+                "reference_baselines.datasets.reference_graph.load_graph",
+                return_value={},
+            ),
         ):
             with self.assertRaises(ValueError):
                 build_table("train")
