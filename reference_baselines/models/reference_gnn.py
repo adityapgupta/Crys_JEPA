@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from reference_baselines.models.reference import segment_sum, segment_softmax
 
 
-KINDS = ("gcn", "gat", "no_graph")
+KINDS = ("gcn", "gat", "sage", "no_graph")
 
 
 class GCNLayer(nn.Module):
@@ -59,6 +59,23 @@ class GATLayer(nn.Module):
         return self.norm(x + F.silu(self.update(torch.cat([x, aggregate], dim=1))))
 
 
+class SAGELayer(nn.Module):
+    """GraphSAGE mean aggregation: concatenate self with neighbour mean."""
+
+    def __init__(self, hidden):
+        super().__init__()
+        self.message = nn.Linear(hidden, hidden)
+        self.update = nn.Linear(2 * hidden, hidden)
+        self.norm = nn.LayerNorm(hidden)
+
+    def forward(self, x, edge, weight):
+        source, target = edge
+        degree = segment_sum(weight, target, len(x)).clamp_min(1e-12)
+        scale = weight / degree[source]
+        aggregate = segment_sum(self.message(x[source]) * scale[:, None], target, len(x))
+        return self.norm(x + F.silu(self.update(torch.cat([x, aggregate], dim=1))))
+
+
 class ReferenceGNN(nn.Module):
     """Predict per-reference utility, then weight reference distances."""
 
@@ -73,6 +90,8 @@ class ReferenceGNN(nn.Module):
             self.layers = nn.ModuleList([GCNLayer(hidden) for _ in range(layers)])
         elif kind == "gat":
             self.layers = nn.ModuleList([GATLayer(hidden) for _ in range(layers)])
+        elif kind == "sage":
+            self.layers = nn.ModuleList([SAGELayer(hidden) for _ in range(layers)])
         else:
             self.layers = nn.ModuleList()
         self.readout = nn.Sequential(

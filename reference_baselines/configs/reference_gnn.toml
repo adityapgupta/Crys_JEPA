@@ -1,6 +1,6 @@
 # Frozen before the reserved partition is opened. Do not edit after a full run.
 status = "cluster_ready"
-models = ["gcn", "gat", "no_graph"]
+models = ["gcn", "gat", "sage"]
 seeds = [2026, 2027, 2028]
 hidden = 64
 layers = 2

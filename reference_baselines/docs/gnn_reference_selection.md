@@ -86,6 +86,7 @@ Three model kinds use the same readout:
 | --- | --- |
 | `gcn` | Symmetric degree-normalised convolution with edge weights |
 | `gat` | Single-head edge-aware attention inside one candidate pool |
+| `sage` | GraphSAGE mean aggregation, concatenated with the self vector |
 | `no_graph` | No message passing. Node features and query only |
 
 The readout concatenates:
@@ -152,7 +153,8 @@ Controls:
 - `formula_prior_natural_pool` — formula prior only, no learned logits;
 - `random_references` — matched random pool, equal weights;
 - `gcn_self_only`, `gat_self_only` — learned readout with self-loops only;
-- `no_graph` — learned readout without graph messages;
+- `no_graph` — learned readout without graph messages (supported, but not in
+  the default model list);
 - all learned models on the `cosine`, `self`, and `permuted` graphs.
 
 These controls separate the effect of graph messages from the effect of the

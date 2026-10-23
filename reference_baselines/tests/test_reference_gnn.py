@@ -187,7 +187,7 @@ class ModelTests(unittest.TestCase):
         }
 
     def test_models_return_finite_gradients(self):
-        for kind in ("gcn", "gat", "no_graph"):
+        for kind in ("gcn", "gat", "sage", "no_graph"):
             with self.subTest(kind=kind):
                 model = ReferenceGNN(kind, hidden=8, layers=1)
                 batch = self.batch()

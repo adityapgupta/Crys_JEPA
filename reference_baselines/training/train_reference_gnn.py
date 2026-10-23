@@ -64,7 +64,9 @@ def reference_metrics(model, loader, device):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(CONFIG_DIR / "reference_gnn.toml"))
-    parser.add_argument("--model", choices=["gcn", "gat", "no_graph"], default=None)
+    parser.add_argument(
+        "--model", choices=["gcn", "gat", "sage", "no_graph"], default=None
+    )
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--graph", default=None, help="Override the graph ablation")
     parser.add_argument("--smoke", action="store_true")

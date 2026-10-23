@@ -233,7 +233,9 @@ for graph in physical cosine self permuted; do
 done
 ```
 
-This is 3 models × 3 seeds × 4 graphs = 36 runs, up to 20 epochs each.
+This is 3 models (`gcn`, `gat`, `sage`) × 3 seeds × 4 graphs = 36 runs, up to
+20 epochs each. `no_graph` remains available as an optional control, but it is
+not in the default model list.
 
 Each run writes:
 
