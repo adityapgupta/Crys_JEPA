@@ -1,0 +1,27 @@
+# New experiment. Keep separate from the frozen reference_gnn.toml protocol.
+status = "configured_unrun"
+graph = "physical"
+models = ["gcn", "gat", "sage"]
+variants = ["scalar", "rich", "shuffled", "readout"]
+seeds = [2026, 2027, 2028]
+hidden = 64
+layers = 2
+epochs = 20
+early_stop_patience = 4
+batch_size = 32
+learning_rate = 0.001
+weight_decay = 0.0001
+retrieval_k = 5
+train_limit = 0
+validation_limit = 0
+threads = 8
+device = "cpu"
+edge_seed = 2026
+primary_budget_percent = 5
+bootstrap_draws = 1000
+edge_features = ["embedding_cosine_similarity", "same_space_group", "electronegativity_profile_distance"]
+topology = "Frozen fit-side hull-decomposition co-occurrence graph"
+checkpoint_rule = "Lowest validation reference BCE; ties use the earlier epoch"
+primary_comparison = "rich minus scalar and rich minus shuffled within model family at the fixed reserved budget"
+controls = ["shuffled chemistry/symmetry alignment", "edge-feature readout without message passing"]
+claim_limit = "MatterSim proxy screen; isolates feature value on fixed topology, not a new connectivity rule"

@@ -10,6 +10,8 @@ def unique_order(rows, adjacency):
     kept, order = set(), []
     for row in rows:
         row = int(row)
+        if row in kept:
+            continue
         if not adjacency.get(row, set()).intersection(kept):
             kept.add(row); order.append(row)
     return np.array(order, dtype=np.int64)

@@ -227,7 +227,93 @@ guide `../reference_set_comparison/COMMANDS_TO_EXECUTE.md` includes isolated
 environments, real-weight smoke tests, staged Slurm commands, cache resumption,
 and result retrieval. The batch range is configurable; 20-29 is the initial run.
 
+> **Correction — 23 October 2026.** The learned GNN/MPNN results in the earlier
+> GNN section are invalid for the new reference-selection question. Those models
+> predicted candidate stability and used candidate stability labels for training
+> or checkpoint choice. The new model predicts reference utility only. Candidate
+> stability comes from MatterSim relaxation. See
+> [the new design](gnn_reference_selection.md). The historical numbers below are
+> kept as a record and must not be reported as results for the new method.
+
+## Pre-GNN controls — 22 October 2026
+
+The new controls change the interpretation of the earlier global gain. At test
+5%, original mean gives 644 passes, formula-balanced mean 696, and the fixed
+angle gate 782. With a shared unique candidate set and identical chemical-system
+quotas, the gate gives 640 versus 644 under original quotas, and 759 versus 757
+under angle-rule quotas. Both gain intervals include zero. This supports a
+chemistry-mix explanation for much of the global gain; it is not proof of
+improved same-formula structural ranking or a causal decomposition.
+
+A seeded same-formula study includes 4,622 passing/failing test pairs across
+1,262 formulas. Original and angle-gate pair-order accuracies are 50.8% and 50.7%.
+Direct ranking by the exact evaluation hull labels gives 100% passes at the
+requested global budgets; it is an explicitly labelled oracle, not an independent
+predictor. These controls use the existing saved MatterSim labels and do not mix
+in selective extra-relaxation results. All four budgets and both splits are saved.
+
+The official JEPA checkpoint was obtained, but its exact lattice scaler and the
+script that produced our saved vectors were not found locally or in the public
+release listing. Raw feature and geometric equivalence checks are complete;
+encoder reproduction and invariance remain pending those inputs. A fresh final
+evaluation protocol is prepared, but new candidates must be collected only after
+model settings are frozen. No GNN training or new generation has started.
+
+See [full pre-GNN findings](pre_gnn_report.md) and
+[the progress tracker](PRE_GNN_PROGRESS.md). Earlier sections below record the
+chronology and their original numerical results remain unchanged.
+
+## Mean and reference-pool controls — 19 October 2026
+
+The previous 1° candidate-gate gain did not use weighted averaging. The paper's
+screening mean is also uniform (Eq. 11); its energy-weighted training loss is a
+separate operation. New controls vary the pool and averaging rule separately,
+using the same saved MatterSim labels at 1%, 2%, 5%, and 7% in both splits.
+
+At 5% on the test set, original chemical references give 644 passes with a plain
+mean and 692 with normalized exp(-distance/10) weights. The 1° reference pool
+(nearest ten, original-pool fallback) gives 785 plain and 793 weighted. Weighting
+alone does not explain the angular gain. The original-plus-five-cosine-neighbour
+union gives 682 plain and 648 weighted: enlarging the pool is not a reliable gain
+under these controls. The plain angle-pool and previous candidate gate overlap
+in 1,783/1,849 selections (96.4%) and differ by only three passes, so better
+physical reference choice is still not established. These are exploratory
+comparisons on already inspected splits. All 36 tests pass.
+
+See [the mean ablation report](mean_ablation.md) for all 12 controls, all budgets,
+fixed weight settings, exact effects and uncertainty ranges. No new training or
+relaxation was run; extra re-relaxation results were not mixed into this table.
+
+## Budget study — 19 October 2026
+
+Both fixed rules were compared at 1%, 2%, 5%, and 7% of the same 36,994 test
+candidates. On the same saved MatterSim energies, original versus angle-rule
+stability passes are 146/157, 269/328, 644/782, and 905/1,042. The gains are
+2.98, 7.98, 7.46, and 5.29 percentage points. The 1% uncertainty range includes
+zero. No rule, angle threshold, or generator was changed. This is screening,
+not new generation, and the test outcomes were already open.
+
+Separate extra-relaxation checks give 149/162 at 1%, 273/339 at 2%, and 662/808
+at 5%. The full 7% original selection has not received that extra check, so no
+complete fresh 7% comparison is claimed. See the [budget study](budget_study.md)
+for the selection counts, uncertainty, check coverage, and commands.
+
 ## Current status — 18 October 2026
+
+Fresh MatterSim validation and a qualitative study are now complete. All 1,394
+added test selections were checked again and re-relaxed; all converged and pass
+the basic geometry/composition rules. Of these, 635 meet the stability cutoff.
+Both methods received the same checks. After convergence, validity, and duplicate
+checks without refill, the angle rule has 808 unique stability passes versus 662
+for original Crys-JEPA, from 1,849 original slots each. These counts describe the
+new re-relaxation stage; the frozen results below remain unchanged.
+
+See [fresh MatterSim validation](mattersim_validation.md) and
+[why the rule helped](selection_interpretation.md), including matched wins,
+counterexamples, structures, reference pools, and embedding plots. All 27 tests
+pass. DFT is reserved for final publication checks with the chemistry team.
+Neural training remains deferred while the representation and reference roles
+are reviewed.
 
 The fixed baseline study and held-out test are complete. Neural training remains
 deferred. The main rule uses a 1-degree cosine angle filter, then the original
@@ -248,10 +334,11 @@ Cross-batch duplicate checks and selected-set MP2023 novelty checks are complete
 All 19 tests pass. No independent DFT calculation, full neural training,
 generation-loop test, or synthesis check has been run.
 
-Next: prepare a balanced DFT sample from the two selection methods and fix the
-evaluation settings before calculation. Review that evidence before choosing a
-training run. The test set is now open and cannot be reused as an unseen test
-after further tuning.
+Next: review the matched examples and complete original-encoder invariance
+checks before choosing a learned reference-weighting model. Continue comparative
+work with MatterSim. Independent DFT is a final publication check rather than a
+block on model development. The test set is open and cannot be reused as an
+unseen test after further tuning.
 
 See the [full test report](heldout_experiment.md) and the
 [validation baseline study](nonparametric_experiments.md).

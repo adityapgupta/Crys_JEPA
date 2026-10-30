@@ -19,13 +19,28 @@ def bh_adjust(p):
     return result
 
 
-def concentration(sg, communities, draws=1000, seed=2026, minimum=50):
+def permutation_indices(size, rng, blocks=None):
+    if blocks is None:
+        return rng.permutation(size)
+    order = np.arange(size)
+    for rows in blocks:
+        order[rows] = rng.permutation(rows)
+    return order
+
+
+def concentration(sg, communities, draws=1000, seed=2026, minimum=50, strata=None):
     if draws < 1 or minimum < 1:
         raise ValueError('draws and minimum must be positive')
     sg = np.asarray(sg)
     communities = np.asarray(communities)
     if sg.ndim != 1 or len(sg) == 0 or sg.shape != communities.shape:
         raise ValueError('Nonempty aligned one-dimensional label arrays required')
+    blocks = None
+    if strata is not None:
+        strata = np.asarray(strata)
+        if strata.shape != sg.shape:
+            raise ValueError('Strata must align with labels')
+        blocks = [np.flatnonzero(strata == b) for b in np.unique(strata)]
     groups, si = np.unique(sg, return_inverse=True)
     _, ci = np.unique(communities, return_inverse=True)
     nc = int(ci.max()) + 1
@@ -37,7 +52,9 @@ def concentration(sg, communities, draws=1000, seed=2026, minimum=50):
     observed_counts = counts(ci)
     observed = top_share(observed_counts)
     rng = np.random.default_rng(seed)
-    null = np.array([top_share(counts(rng.permutation(ci))) for _ in range(draws)])
+    # Permuting community assignments is equivalent to permuting space-group labels.
+    null = np.array([top_share(counts(ci[permutation_indices(len(ci), rng, blocks)]))
+                     for _ in range(draws)])
     keep = sizes >= minimum
     if not keep.any():
         raise ValueError('No space groups meet the minimum sample size')

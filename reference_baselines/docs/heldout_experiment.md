@@ -4,6 +4,12 @@ This run uses settings fixed before test energy outcomes were opened.
 
 ## Where we are now — 18 October 2026
 
+Later update: [fresh MatterSim validation](mattersim_validation.md) now checks
+all additional selections and original controls with new energy/force inference
+and re-relaxation. [The interpretation report](selection_interpretation.md)
+explains examples and embedding behaviour. DFT is reserved for final publication
+checks. The numerical results below record the original frozen comparison.
+
 The fixed baseline study and the held-out test are complete. The current rule is:
 give priority to candidates within 1 degree of any known reference in JEPA space,
 then use the original Crys-JEPA score within each group. References still come
@@ -22,11 +28,11 @@ not use a graph.
 Still open: independent DFT checks, the cause of the gain, and whether a trained
 reference model adds value. No synthesis or generation-loop gain is established.
 
-Next: fix a balanced DFT sample from the original and angle-rule selections,
-including shared and different selections. Use the same DFT settings and failure
-rules for every group. Review those results before choosing a training run.
-Neural training remains deferred. The test set is now open; later method tuning
-needs another held-out set or new generated candidates.
+Next: use the qualitative and embedding findings to choose reference features
+and controls for later learning. Neural training remains deferred while these
+are reviewed. The test set is now open; later method tuning needs another
+held-out set or new generated candidates. DFT will be planned at the final
+publication stage with the chemistry team.
 
 - Test candidates: 36,994. Reference bank: 27,136 known MP20 training crystals.
 - Each method selects 1,849 unique candidates (5%, rounded down).

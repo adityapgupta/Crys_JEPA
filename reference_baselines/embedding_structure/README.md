@@ -36,6 +36,37 @@ The optional `--spectrum` diagnostic checks residuals and makes no cluster-count
 
 ## Conventions
 
+### Energy-controlled concentration
+
+After generating `crystals_by_community.csv`, run on CPU (no GPU required):
+
+```sh
+python -m reference_baselines.embedding_structure.energy_capture --data PATH_TO_DATA --draws 1000 --seed 2026
+python -m unittest discover -s tests -p test_energy_capture.py -v
+```
+
+Only `metadata.csv` and the saved community table are needed; embeddings and maps
+are not recomputed. `--out` must point to the directory containing the community
+table if it is not in the default location. Rows are aligned by material ID.
+
+The primary width is 0.01 eV/atom, with 0.025 and 0.05 as sensitivity checks
+(`--widths 0.01 0.025 0.05`). Bins have a fixed zero origin. Permutations stay
+inside each energy bin and reselect the best five communities on every draw.
+All energies must be finite. A fresh unrestricted baseline is computed too.
+
+Outputs are saved under `results/embedding_structure/energy_capture/`: a baseline
+CSV, a concentration CSV and bin diagnostics per width, and `summary.json`.
+Each group includes its fraction of crystals in bins with multiple space groups
+and communities. Low fractions indicate limited mixing; no significance is not
+proof of an absent structural signal. Report all widths rather than selecting
+the most favourable result. BH adjustment is applied separately at each width.
+
+Remaining concentration supports an association beyond this binned-energy null,
+not full independence from energy or composition. `--draws 20` is useful for a
+smoke run only; use 1,000 or more for the reported analysis.
+
+### Graph and probe conventions
+
 Graph weights are `exp(-distance**2/sigma**2)`, with sigma equal to the median
 of all retained neighbour distances. This differs from `graphs/build.py`, which
 uses kth-neighbour distances and a factor of two. Self-neighbours are excluded
