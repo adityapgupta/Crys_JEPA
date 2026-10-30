@@ -8,16 +8,15 @@ import json
 import pickle
 import warnings
 
-from pymatgen.analysis.phase_diagram import PhaseDiagram, PDEntry
-from pymatgen.core import Composition, Structure
+from pymatgen.core import Structure
 from pymatgen.entries.compatibility import MaterialsProject2020Compatibility
-from scipy.optimize import linprog
 import numpy as np
 import pandas as pd
 import torch
 
 from eval.vsun.structure_summary import VasprunLike, IdentityCorrectionScheme
 from reference_baselines.core.io import sha256
+from reference_baselines.core.thermodynamics import FixedHull
 from reference_baselines.paths import ROOT, DATA_DIR, RESULTS_DIR
 
 
@@ -108,41 +107,14 @@ def hull_group(task):
     if missing:
         return [{'candidate_row': r['candidate_row'], 'hull_status': 'missing_elemental_reference',
                  'hull_error': ','.join(missing)} for r in records]
-    comps = [Composition(r['formula']) for r in refs]
-    energy = np.array([r['energy_per_atom'] for r in refs])
-    entries = [PDEntry(c, e * c.num_atoms, name=r['entry_id']) for c, e, r in zip(comps, energy, refs)]
-    diagram = None
-    if len(elements) <= 4:
-        try:
-            diagram = PhaseDiagram(entries)
-        except Exception:
-            pass  # Use the same composition-constrained minimization as a fallback.
-    matrix = None
+    solver = FixedHull(elements, refs)
     result = []
     cache = {}
     for record in records:
         formula = record['formula']
         try:
             if formula not in cache:
-                comp = Composition(formula)
-                if diagram is not None:
-                    decomposition = diagram.get_decomposition(comp)
-                    hull_energy = sum(entry.energy_per_atom * weight for entry, weight in decomposition.items())
-                    products = [{'entry_id': entry.name, 'fraction': float(weight),
-                                 'formula': entry.composition.reduced_formula} for entry, weight in decomposition.items()]
-                    method = 'phase_diagram'
-                else:
-                    if matrix is None:
-                        matrix = np.array([[c.get_atomic_fraction(e) for c in comps] for e in elements])
-                    target = [comp.get_atomic_fraction(e) for e in elements]
-                    solution = linprog(energy, A_eq=matrix, b_eq=target, bounds=(0, None), method='highs')
-                    if not solution.success:
-                        raise ValueError(solution.message)
-                    np.testing.assert_allclose(matrix @ solution.x, target, atol=1e-7)
-                    hull_energy = float(solution.fun)
-                    products = [{'entry_id': r['entry_id'], 'fraction': float(weight), 'formula': r['formula']}
-                                for r, weight in zip(refs, solution.x) if weight > 1e-8]
-                    method = 'linear_program'
+                hull_energy, products, method = solver.minimum(formula)
                 cache[formula] = hull_energy, products, method
             hull_energy, products, method = cache[formula]
             delta = record['corrected_energy_per_atom'] - hull_energy

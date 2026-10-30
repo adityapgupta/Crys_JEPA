@@ -1,0 +1,7 @@
+# Install the appropriate CPU/CUDA build of torch first (repo baseline: 2.6.0).
+numpy
+pandas
+pymatgen==2025.6.14
+torch-geometric
+PyYAML
+certifi

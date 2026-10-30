@@ -1,0 +1,9 @@
+# Shared non-model dependencies; model environments are separate.
+numpy==1.26.4
+pandas==2.2.3
+scipy==1.14.1
+PyYAML==6.0.2
+certifi==2025.1.31
+lmdb==1.6.2
+huggingface-hub==0.30.2
+ase==3.24.0
