@@ -17,7 +17,7 @@
 \setbeamercolor{frametitle}{fg=navy}
 \setbeamercolor{title}{fg=navy}
 \setbeamertemplate{footline}{\hspace{7mm}\scriptsize Reference-crystal selection for Crys-JEPA\hfill\insertframenumber/\inserttotalframenumber\hspace{7mm}\vspace{3mm}}
-\graphicspath{{../assets/}}
+\graphicspath{{assets/}{presentations/assets/}{../assets/}}
 \newcommand{\ehull}{E_{\mathrm{hull}}}
 \newcommand{\source}[1]{\par\vspace{1mm}{\scriptsize\color{gray}#1}}
 \tikzset{stage/.style={draw=navy,line width=.5pt,rounded corners=1mm,align=center,font=\small,minimum height=9mm,inner sep=2mm},arr/.style={-{Stealth[length=1.5mm]},line width=.6pt,draw=navy}}
@@ -269,12 +269,100 @@ GraphSAGE & 183\;\textcolor{red}{(-6)} & 325\;\textcolor{red}{(-3)} & 745\;\text
 \source{Counts are unique selected candidates passing the MatterSim hull screen.}
 \end{frame}
 
+% Independent proxy experiment: batches 20--29, frozen encoder, no new training.
+\begin{frame}{Reference Set Comparison using Atomistic Models}
+\begin{itemize}\setlength\itemsep{4mm}
+\item We need a proxy for comparing screening rules when new DFT calculations are outside the project scope.
+\item Crys-JEPA also compares embedding screening with atomistic energy models: \textbf{eSEN and CHGNet}.
+\item We use open \textbf{MEGNet and eSEN} weights to judge the same candidate selections under two additional models.
+\item Question: does a chemical reference pool, embedding kNN, or their union retrieve more proxy near-stable crystals at the same budget?
+\end{itemize}
+\vspace{3mm}
+\centering\color{navy}\textbf{Change the screening references. Keep the candidate pool and evaluation hull fixed.}
+\source{Crys-JEPA, Secs. 3 and 5, pp. 4 and 9: MatterSim evaluation and eSEN/CHGNet energy-based screening. MEGNet is our additional proxy.}
+\end{frame}
+
+\begin{frame}{Methodology: reference pools and equal screening budgets}
+\begin{itemize}\setlength\itemsep{2mm}
+\item \textbf{Candidates: 6,258} MatterSim-relaxed, valid/unique/novel crystals from released batches 20--29.
+\item \textbf{References: 27,136} MP-20 crystals. Use the same frozen JEPA weights and reconstructed scaler for every embedding.
+\end{itemize}
+\vspace{2mm}
+\centering
+{\small\begin{tabular}{lp{.67\textwidth}}
+\toprule
+Pool & Reference selection rule\\
+\midrule
+Chemical baseline & All MP-20 references within the candidate's chemical subsystems.\\[1mm]
+kNN & Closest $q\in\{5,10,15,25\}$ raw JEPA embeddings by squared Euclidean distance.\\[1mm]
+Union & Chemical pool plus kNN, deduplicated by reference ID.\\
+\bottomrule
+\end{tabular}}
+\vspace{1mm}
+\[
+s_R(c)=\frac{1}{|R(c)|}\sum_{r\in R(c)}\lVert h_c-h_r\rVert_2^2
+\]
+\small Rank the \textbf{combined ten-folder pool}. Top \textbf{1\%, 5\%, 10\%}: \textbf{62, 312, 625} unique selections per method, with a seeded random control.
+\source{Hugging Face: liun-online/Crys\_JEPA, exp\_logs/base/mp\_20/eval. These figures retain the combined-ranking results.}
+\end{frame}
+
+\begin{frame}{Proxy stability: energy above a fixed reference hull}
+\centering
+{\small\begin{tabular}{lp{.66\textwidth}}
+\toprule
+Open model & Predicted quantity used for candidates and reference phases\\
+\midrule
+MEGNet & Formation energy per atom, from \texttt{MEGNet-Eform-MP-2018.6.1}.\\[2mm]
+eSEN & Total cell energy divided by atom count, from \texttt{esen\_30m\_mptrj.pt}.\\
+\bottomrule
+\end{tabular}}
+\vspace{2mm}
+\begin{itemize}\setlength\itemsep{2mm}
+\item Predict \textbf{58,377 MP2023 reference structures} and build a separate fixed hull for each model. Reuse stored geometries without another relaxation.
+\item Find the lowest predicted energy of a reference-phase mixture that matches the candidate's composition.
+\end{itemize}
+\vspace{-1mm}
+\[
+H_m(x_c)=\min_{\substack{\lambda_j\ge0,\ \sum_j\lambda_j=1\\\sum_j\lambda_j x_j=x_c}}
+\sum_j\lambda_j E_m(P_j),
+\qquad \Delta E_m(c)=E_m(c)-H_m(x_c).
+\]
+\centering\textbf{Proxy near-stable: $\Delta E_m<0.1$ eV/atom.}\par
+\vspace{2mm}
+\small $p=0.01$ means selecting the top \textbf{1\%}. It is separate from the energy threshold. Union changes the JEPA score, not the hull bank.
+\source{MEGNet: materialyze/MEGNet-Eform-MP-2018.6.1. eSEN: facebook/OMAT24. Native model energies, no added MP corrections. Candidates never enter the fixed hull.}
+\end{frame}
+
+\begin{frame}{MEGNet results: kNN-25 leads at the 1\% budget}
+\centering
+% Retain the left bar/count panel; exclude the right confidence-interval panel.
+\includegraphics[viewport=0 0 460 340,clip,height=.64\textheight]{megnet_primary_comparison.png}
+\vspace{-1mm}
+\begin{itemize}\setlength\itemsep{1mm}
+\item \textbf{kNN-25: \textcolor{teal}{56/62 (90.3\%)}} versus chemical \textbf{41/62 (66.1\%)}. \textcolor{teal}{\textbf{15 additional proxy passes.}}
+\item Gain: \textbf{+24.2 percentage points} at the same selection budget.
+\end{itemize}
+\source{Combined ranking of batches 20--29, top 1\%: 62 selections. Fixed MEGNet hull distance $<0.1$ eV/atom. All labels available.}
+\end{frame}
+
+\begin{frame}{eSEN results: lower pass rates and a baseline advantage}
+\centering
+\includegraphics[viewport=0 0 460 340,clip,height=.64\textheight]{esen_primary_comparison.png}
+\vspace{-1mm}
+\begin{itemize}\setlength\itemsep{1mm}
+\item \textbf{Chemical: \textcolor{blue}{37/62 (59.7\%)}}; kNN-5: \textbf{31/59 (52.5\%)}; kNN-25: \textbf{28/59 (47.5\%)}.
+\item All methods have lower pass rates than with MEGNet. Both kNN sets have three unknowns.
+\end{itemize}
+\source{Combined ranking, 62 slots. Precision uses valid labels; unknowns remain unknown. Pass rates do not measure model accuracy.}
+\end{frame}
+
 \begin{frame}{What the current results mean}
 \begin{itemize}\setlength\itemsep{4mm}
 \item The angle gate and KNN controls change which chemical systems receive selection slots.
 \item Same-chemistry controls remove most of the earlier global gain.
 \item Same-formula pair accuracy is close to 50\%, so the current score does not strongly order polymorphs by stability.
 \item The completed cluster evaluation shows a positive graph-model result at the fixed 5\% budget.
+\item The atomistic-model comparison favours kNN under MEGNet, but eSEN does not corroborate that gain at 1\%.
 \item The result is a MatterSim screening comparison. It does not prove lower true formation energy.
 \end{itemize}
 \end{frame}
@@ -283,6 +371,7 @@ GraphSAGE & 183\;\textcolor{red}{(-6)} & 325\;\textcolor{red}{(-3)} & 745\;\text
 \begin{itemize}\setlength\itemsep{4mm}
 \item The reference bank is known MP20 training data.
 \item MatterSim labels provide a consistent comparative screen.
+\item MEGNet and eSEN disagree on which reference rule works best, so conclusions remain specific to the proxy.
 \item The current gains are screening-yield gains, not proof of lower true formation energy.
 \item We still need to analyse the results of individual success/reject cases and understand at a deeper level.
 \end{itemize}
