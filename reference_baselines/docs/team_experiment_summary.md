@@ -9,6 +9,11 @@ Unless stated otherwise, a "pass" means a corrected **MatterSim proxy** energy n
 more than 0.1 eV/atom above the fixed MP2023 hull. It is not a DFT, synthesis,
 phonon, or finite-temperature stability result.
 
+The MEGNet/eSEN comparison below is an exception: it uses each model's own fixed
+MP2023 hull and a strict **<0.1 eV/atom** cutoff. It studies a separate candidate
+population, so compare methods within that experiment rather than comparing its
+absolute pass rates with the historical MatterSim studies.
+
 ## Experiments at a glance
 
 | Experiment | What we tested | Main result | What it supports | Main limitation |
@@ -24,26 +29,64 @@ phonon, or finite-temperature stability result.
 | Space-group concentration | Whether individual space groups concentrate in a small number of embedding communities | 61 of 73 eligible groups had BH-adjusted q ≤ 0.05 under the unconditional label-permutation null; concentration varied strongly by group | Some symmetry labels are non-randomly concentrated in this graph partition | Space group is not a structural prototype; the reported null is not conditioned on energy or composition |
 | Historical candidate-stability GNN pilot | Whether a cosine reference graph improved a learned candidate-stability model over a no-graph control | Mean 5% validation yields were about 60.2% no-graph, 60.0% GCN, and 59.7% MPNN; no graph advantage appeared | The pipeline ran, but neighbour message passing did not show value over learned readout | This pilot trained/selected with candidate labels and its reported validation overlaps checkpoint selection; it is **not valid evidence** for the newer reference-utility question |
 | Reference-utility GNN with explicit edge attributes | Whether embedding similarity, same-space-group, and electronegativity distance improve the fixed physical reference graph | Mean reserved 5% yield: scalar 44.4%, real attributes 44.4%, shuffled attributes 44.2%, no-message readout 44.2%; all nine real-versus-scalar intervals include zero | These attributes add no demonstrated value on this topology; graph propagation also adds no measurable value | Internal engineering holdout, MatterSim labels, fixed topology, and coarse feature definitions |
+| Chemical, kNN and union screening under MEGNet/eSEN | Whether changing the frozen-JEPA reference pool improves screening under two additional stability proxies | At unique top 1%: MEGNet kNN-25 gives 56/62 (90.3%) versus chemical 41/62 (66.1%); eSEN instead gives chemical 37/62 (59.7%) versus kNN-25 28/59 valid labels (47.5%; three unknown) | The benefit of kNN depends on the proxy; the large MEGNet gain is not corroborated by eSEN | One exploratory ten-folder group, reconstructed scaler, missing eSEN labels, and model-based rather than DFT stability |
+
+## Chemical, kNN and union under MEGNet/eSEN
+
+We screened **6,258 eligible MatterSim-relaxed candidates from batches 20–29**
+against **27,136 MP-20 reference embeddings**, using the same frozen JEPA encoder
+and reconstructed scaler. We compared chemical-subsystem references, exact
+embedding kNN with 5/10/15/25 neighbours, and their deduplicated union. Each pool
+gives a mean squared Euclidean embedding-distance score; lower scores rank first.
+The primary budget was **1% with unique refill: 62 crystals per method**; 5% and
+10% budgets and a seeded random ranking were additional checks.
+
+MEGNet and eSEN evaluated the selected crystals against separate, fixed
+same-model hulls using **58,377 MP2023 reference structures**. Candidate geometries
+were not relaxed again. **Union changes the references used for the JEPA score,
+not the hull phase bank**: every screening method receives the same proxy label
+for a given candidate. No new graph model was trained in this comparison.
+
+**The models disagree on the primary result.** MEGNet favours kNN-25, with
+90.3% passing versus chemical's 66.1% (+24.2 percentage points; descriptive paired
+chemical-system 95% interval +8.6 to +40.3 points). eSEN favours chemical at 59.7%,
+versus kNN-5 at 31/59 valid labels (52.5%; three unknown) and kNN-25 at 28/59
+(47.5%; three unknown). Even counting those unknowns as passing leaves both
+kNN variants below chemical in this sample, but all pure-kNN eSEN comparison
+intervals include zero.
+
+Chemical and kNN-5 each yield **27 confirmed both-model passes per 62 slots**;
+kNN-25 yields 26. Union variants yield 19–22. At larger budgets the observed
+leader varies: MEGNet favours kNN-5/10 at 5% and kNN-10 at 10%; eSEN favours
+kNN-5 at 5%, while at 10% chemical has the highest valid-label precision and
+kNN-10 the highest confirmed yield per requested slot. **There is no established
+best method across both proxies**, and unknown labels must remain explicit.
+See [the experiment tracker](EXPERIMENT_REPORT.md#completed-megnetesen-screening-experiment--analysis-updated-28-october-2026)
+for the protocol, coverage bounds, tests, and full results.
 
 ## The clearest conclusions so far
 
 1. **The embeddings carry a strong energy/composition signal and a weaker,
    non-random symmetry signal.** The present experiments do not yet show that the
    symmetry signal is independent of chemistry and energy in every setting.
-2. **The 1-degree angle gate is the strongest demonstrated screening rule in the
-   current pipeline.** Its fixed test and fresh MatterSim checks improved global
-   yield, but chemistry-matched and same-formula controls show that this is not
-   evidence of better polymorph ranking within a fixed composition.
+2. **Within the MatterSim studies, the 1-degree angle gate is the strongest
+   demonstrated screening rule.** Its fixed test and fresh MatterSim checks
+   improved global yield, but chemistry-matched and same-formula controls show
+   that this is not evidence of better polymorph ranking within a fixed composition.
 3. **Graphs have not yet shown an added screening advantage.** Diffusion and
    conductance baselines did not beat the simple gate; the historical GNN pilot did
    not beat its no-graph control; and the completed edge-attribute GNN experiment
    found no reliable value from its real edge attributes or message passing.
 4. **All stability conclusions remain proxy conclusions.** The work supports
-   comparative screening under MatterSim and a fixed reference hull, not a claim
-   that selected materials are synthesizable or DFT-stable.
+   comparative screening under MatterSim, MEGNet, or eSEN and their respective
+   evaluation hulls, not a claim that selected materials are synthesizable or
+   DFT-stable. The MEGNet/eSEN disagreement shows that a gain under one proxy need
+   not transfer to another.
 
 ## Reading guide
 
+- [MEGNet/eSEN reference-selection comparison and results](EXPERIMENT_REPORT.md)
+- [Executed proxy-comparison and embedding-visualisation notebook](../reference_set_comparison/inspect_train.ipynb)
 - [Latest edge-attribute experiment in simple English](edge_attribute_experiment_plain_english.md)
 - [Full edge-attribute protocol](edge_attribute_reference_gnn.md)
 - [Fixed test comparison](heldout_experiment.md)
