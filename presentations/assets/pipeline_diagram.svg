@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="230" viewBox="0 0 1200 230">
+  <rect width="1200" height="230" fill="white"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="22" text-anchor="middle">
+    <g fill="#F3F5F6" stroke="#18334C" stroke-width="2">
+      <rect x="30" y="75" width="180" height="70" rx="8"/>
+      <rect x="265" y="75" width="180" height="70" rx="8"/>
+      <rect x="500" y="75" width="180" height="70" rx="8"/>
+      <rect x="735" y="75" width="180" height="70" rx="8"/>
+      <rect x="970" y="75" width="180" height="70" rx="8"/>
+    </g>
+    <g fill="#18334C">
+      <text x="120" y="105"><tspan x="120" dy="0">Diffusion</tspan><tspan x="120" dy="28">generator</tspan></text>
+      <text x="355" y="105"><tspan x="355" dy="0">MatterSim</tspan><tspan x="355" dy="28">relaxation</tspan></text>
+      <text x="590" y="105"><tspan x="590" dy="0">Crys-JEPA</tspan><tspan x="590" dy="28">embedding</tspan></text>
+      <text x="825" y="105"><tspan x="825" dy="0">Known MP20</tspan><tspan x="825" dy="28">references</tspan></text>
+      <text x="1060" y="105"><tspan x="1060" dy="0">Fixed-budget</tspan><tspan x="1060" dy="28">selection</tspan></text>
+    </g>
+    <g stroke="#18334C" stroke-width="3" fill="none">
+      <path d="M210 110 H255"/><path d="M445 110 H490"/><path d="M680 110 H725"/><path d="M915 110 H960"/>
+    </g>
+    <g fill="#18334C">
+      <path d="M255 110 l-12 -8 v16 z"/><path d="M490 110 l-12 -8 v16 z"/><path d="M725 110 l-12 -8 v16 z"/><path d="M960 110 l-12 -8 v16 z"/>
+    </g>
+  </g>
+</svg>
