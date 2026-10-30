@@ -1,3 +1,19 @@
 screen_out/
 __pycache__/
 *.py[cod]
+
+# Local datasets, release downloads, and Python environments.
+/mp_20/
+/release_data/
+/.venv*/
+
+# Downloaded archives and generated model/embedding artifacts.
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.npy
+*.npz
+*.pt
+*.pth
+*.lmdb

@@ -1,5 +1,232 @@
 # Reference experiments and training readiness
 
+## Completed MEGNet/eSEN screening experiment — analysis updated 28 October 2026
+
+The SOC run for **eval folders 20–29 inclusive** and the combined report are
+complete. The downloaded report files match all 11 hashes in their cluster
+completion receipt. The notebook's earlier MEGNet-only block has been replaced
+with a reusable analysis of both proxies, their coverage, and their agreement.
+The original downloaded report files and the historical studies below are
+unchanged.
+
+Artifacts: [executed notebook](../reference_set_comparison/inspect_train.ipynb),
+[combined cluster report](../reference_set_comparison/outputs/comparison_20_29/reports/REPORT.md),
+[source tables](../reference_set_comparison/outputs/comparison_20_29/reports/pooled_metrics.csv),
+and [derived tables/figures](../reference_set_comparison/outputs/comparison_20_29/reports/analysis/).
+The reusable implementation is [analysis.py](../reference_set_comparison/analysis.py).
+
+### What is being compared, and what union means
+
+This tests **reference selection for a frozen JEPA screening score**, not a newly
+trained graph encoder. Each node here represents an entire reference crystal.
+For candidate embedding `h_C`, chemical references are the MP-20 references whose
+elements are a subset of the candidate's chemical system. Global kNN retrieves
+the nearest `q` reference embeddings without a chemistry restriction.
+
+The exact index uses raw, unnormalised 512-dimensional embeddings and squared
+Euclidean distance:
+
+$$
+\begin{aligned}
+d^2(C,r) &= \sum_{j=1}^{512}(h_{C,j}-h_{r,j})^2, \\
+D_R(C) &= \frac{1}{|R|}\sum_{r\in R}d^2(C,r).
+\end{aligned}
+$$
+
+Lower `D_R` ranks first. It is an embedding-distance score, not a probability,
+formation energy, or energy above hull. Exact-distance ties break by reference
+row ID; score-ranking ties break by preserved `candidate_row`. The nine scored
+configurations are chemical, kNN-5/10/15/25, and union-5/10/15/25; a deterministic
+random candidate ranking is a tenth control.
+
+For each candidate, **`R_union,q = R_chemical ∪ R_kNN,q`**, deduplicated by
+reference ID, and its score is the mean squared distance over this combined
+pool. This is implemented in
+[indexing.py](../reference_set_comparison/indexing.py). It is not the union of
+generated candidates selected by two methods.
+
+**Clarification of the user's later expectation:** the union pool was **not**
+used to calculate a separate energy-above-hull value. All selected candidates
+were evaluated against the same fixed MP2023 phase bank per proxy, as specified
+in the original independent-proxy plan. Changing the hull with the screening
+method would change the label as well as the ranking. Some unrestricted kNN
+references also contain elements outside the candidate system and cannot be
+decomposition phases. A study of approximate hulls from restricted/union pools
+would be a separate experiment, assessed against the common fixed hull; these
+results do not claim to test it.
+
+### Proxy stability and fixed-hull calculation
+
+The released geometries are already MatterSim-relaxed. Their `e_relax` is total
+cell energy in eV, not formation energy or energy above hull. This experiment
+does not relax them again. MEGNet and eSEN perform single-point predictions on
+these candidate geometries and on the stored MP2023 reference geometries.
+
+MEGNet supplies predicted formation energy per atom. eSEN supplies total cell
+energy, divided by the represented atom count. A separate fixed hull is built
+for each model in its **own native energy convention**; no DFT energies or
+additional MP compatibility corrections are mixed into these hulls.
+
+For atomic-fraction vectors $x_C$, $x_j$ and proxy per-atom energies $E_m$, solve
+
+$$
+\begin{aligned}
+H_m(x_C) &= \min_{\lambda_j\ge0}\sum_j\lambda_j E_m(P_j), \\
+\text{subject to}\quad \sum_j\lambda_j x_j &= x_C,
+\qquad \sum_j\lambda_j=1, \\
+\Delta E_m(C) &= E_m(C)-H_m(x_C).
+\end{aligned}
+$$
+
+The phase bank contains all relevant chemical subsystems, including elemental
+phases and all available polymorphs before model prediction. There is no pruning
+by lowest DFT energy. Generated candidates never enter the fixed hull. The
+shared `FixedHull` solver uses a phase diagram for small systems and a linear
+program fallback, checking composition balance, nonnegative fractions, and their
+sum. A candidate can lie below this external bank; negative differences are kept.
+
+For eSEN, optional formation energy is `E_t/N − sum_i f_i mu_i`, with each
+elemental `mu_i` obtained from the same model's fixed unary references. Those
+elemental terms cancel between the candidate and a composition-balanced mixture,
+so eSEN hull distances can be calculated directly from its total energies per
+atom. MEGNet and eSEN energies are never averaged together.
+
+The primary positive label is **`Delta E_m < 0.1 eV/atom`**, meaning model-based
+near-stability against this bank. Secondary thresholds are `<0.05` and `<=0`;
+exact-threshold counts are retained. This strict 0.1 rule differs from the older
+MatterSim study's `<=0.1` convention. Unknown predictions/incomplete reference
+hulls remain unknown rather than being silently dropped or marked stable.
+
+These are **proxy labels**, not DFT confirmation or evidence of synthesizability.
+Different learned potentials can disagree, particularly on generated structures.
+The models also share historical materials data, so two-proxy agreement is not
+independent experimental validation.
+
+### Parameters, provenance, and verification
+
+| Item | Recorded configuration |
+| --- | --- |
+| Source population | 8,113 released rows; 6,258 eligible VUN candidates; 1,855 VUN exclusions |
+| Identity/filtering | Original eval folder/JSON row preserved; successful structure parsing, finite recorded energy, no relaxation exception, `vu AND vn` |
+| Reference embeddings | 27,136 x 512 MP-20 training references; frozen JEPA `model_1972.pt` |
+| Embedding convention | Same reference/candidate checkpoint, config, primitive/reduced/type-sorted preprocessing and scaler, verified by hashes |
+| Scaler caveat | Reconstructed from up to 20,000 crystals per JEPA training source; adapted embedding space, not an exact reproduction using the original unavailable scaler |
+| Primary ranking scope | One ten-folder group, `eval_folder // 10 = 2`; pooled results aggregate that same group |
+| Selection | Ascending distance; `floor(p * eligible population)` = 62 / 312 / 625 slots at p = 1% / 5% / 10% |
+| Duplicate policies | Raw and greedy StructureMatcher unique-refill; primary results below use unique-refill |
+| Random/interval settings | Seed 2026; 2,000 paired chemical-system bootstrap resamples; intervals descriptive and unadjusted |
+| Evaluation subset | Union of all required method/budget/policy/scope selections and controls: 2,550 candidate rows |
+| Fixed phase bank | 58,377 MP2023 reference structures; zero structure-import failures; independent of which method selected a candidate |
+| Bank SHA-256 | `01ca5b8c8c42dee3c995d1f4f458cc3be61c8b2011aea0fee41f1e6dd5bd85ce` |
+| MEGNet weights | `materialyze/MEGNet-Eform-MP-2018.6.1`, revision `10c13f7ebd5d89fcb376c037770b2e9b7bd87658` |
+| eSEN weights | `facebook/OMAT24`, `esen_30m_mptrj.pt`, revision `8a5a78c7ba7b250a17e85fe85943c4608499d895` |
+| Runtime environments | MEGNet: torch 2.6.0+cu124 / MatGL 4.1.0 / NumPy 2.2.6; eSEN: torch 2.4.1+cu124 / fairchem-core 1.10.0 / NumPy 1.26.4 |
+
+Source tests cover deterministic exhaustive neighbours/ties, chemical eligibility,
+union deduplication and direct-distance equivalence, selection rounding/refill,
+reference alignment, provenance checks, binary hull solutions, LP/phase-diagram
+agreement, elemental-offset cancellation, strict thresholds, incomplete hulls,
+failure isolation, and resumable caches. Both models passed real-weight GPU
+smoke tests on SOC: finite energies, singleton/chunk agreement and replicated-cell
+per-atom units. No model inference was repeated on the laptop for this analysis.
+
+The report-analysis tests additionally cover missing-label denominators,
+precision-versus-yield winner differences, consensus denominators, membership
+overlap checks, modified transfers, and receipt path traversal. The executed
+notebook audits every reported count/denominator and selection overlap, reconciles
+joint-model counts, verifies pooled/turn aggregation, and confirms **all MEGNet
+metrics and its model identity match the earlier standalone report**.
+On this update, **20 targeted tests pass**: ten proxy/pipeline checks, six
+reference-export checks, and four new report-analysis checks. Seven model and
+comparison figures are embedded in the executed notebook. This is targeted
+verification, not a claim that every historical repository test was rerun.
+
+### Primary results: unique top 1%, 62 requested slots per method
+
+MEGNet labels all 62 selections for every method. eSEN has the unknown counts
+shown below. Precision denominators are valid labels; yield bounds use all 62
+requested slots, treating unknowns as failing/passing at the two extremes.
+
+| Method | MEGNet pass/valid (precision) | eSEN pass/valid (precision) | eSEN unknown | eSEN slot-yield bounds | Confirmed both-pass / 62 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Chemical | 41/62 (66.1%) | 37/62 (59.7%) | 0 | 59.7–59.7% | 27 (43.5%) |
+| kNN-5 | 53/62 (85.5%) | 31/59 (52.5%) | 3 | 50.0–54.8% | 27 (43.5%) |
+| kNN-10 | 51/62 (82.3%) | 28/60 (46.7%) | 2 | 45.2–48.4% | 25 (40.3%) |
+| kNN-15 | 51/62 (82.3%) | 28/60 (46.7%) | 2 | 45.2–48.4% | 24 (38.7%) |
+| kNN-25 | 56/62 (90.3%) | 28/59 (47.5%) | 3 | 45.2–50.0% | 26 (41.9%) |
+| Union-5 | 41/62 (66.1%) | 29/60 (48.3%) | 2 | 46.8–50.0% | 22 (35.5%) |
+| Union-10 | 43/62 (69.4%) | 27/58 (46.6%) | 4 | 43.5–50.0% | 22 (35.5%) |
+| Union-15 | 42/62 (67.7%) | 27/58 (46.6%) | 4 | 43.5–50.0% | 22 (35.5%) |
+| Union-25 | 42/62 (67.7%) | 24/58 (41.4%) | 4 | 38.7–45.2% | 19 (30.6%) |
+| Random control | 34/62 (54.8%) | 17/56 (30.4%) | 6 | 27.4–37.1% | 9 (14.5%) |
+
+MEGNet kNN-25 improves valid-label precision over chemical by **24.19 percentage
+points**, with descriptive paired chemical-system 95% interval **[+8.62,+40.30]
+pp**. eSEN reverses the observed ordering: kNN-5 is **−7.14 pp**, interval
+**[−23.47,+11.38] pp**; kNN-25 is **−12.22 pp**, interval **[−29.65,+7.14] pp**.
+All pure-kNN eSEN intervals include zero. Chemical's observed primary count stays
+higher even if every missing pure-kNN label is assumed passing, but that bound
+does not eliminate sampling uncertainty or establish universal superiority.
+
+### Budgets, model disagreement, and interpretation
+
+| Budget | MEGNet highest observed precision | eSEN highest observed precision | eSEN highest confirmed slot yield |
+| --- | --- | --- | --- |
+| 1% / 62 slots | kNN-25: 56/62 = 90.3% | Chemical: 37/62 = 59.7% | Chemical: 37/62 = 59.7% |
+| 5% / 312 slots | kNN-5 and kNN-10: 259/312 = 83.0% | kNN-5: 158/302 = 52.3% | kNN-5: 158/312 = 50.6% |
+| 10% / 625 slots | kNN-10: 495/625 = 79.2% | Chemical: 266/575 = 46.3% | kNN-10: 273/625 = 43.7% |
+
+At top 1%, chemical and kNN-25 share **zero selections**. That measures retrieval
+overlap, not correctness. For kNN-25's 59 jointly labelled selections, **26 pass
+both**, **27 pass MEGNet only**, **two pass eSEN only**, and **four fail both**;
+three of its 62 selections are unknown in eSEN. Label agreement among the 59 is
+**50.8%**. Chemical's agreement is 38/62 = **61.3%**. Chemical and kNN-5 tie at
+27 confirmed dual-proxy successes per 62 slots; unknowns leave their ultimate
+dual-proxy rates uncertain. Do not average model energies or precisions to
+manufacture a single overall winner.
+
+Unique refill matters: chemical screening has 39/62 eSEN positives under the raw
+policy versus 37/62 for the primary unique policy. Do not mix those endpoints.
+Sixty matching structure pairs were detected across the candidate pool; that is
+a pair count, not sixty duplicate crystals. Per-folder heatmaps use their own
+approximately six-slot rankings, not a decomposition of the primary selection.
+
+**Conclusion:** pure kNN is stronger under MEGNet, but its primary gain is not
+corroborated by eSEN or a clear gain in confirmed both-model yield. The union
+score does not consistently improve both proxies. This one exploratory group
+does **not** establish a proxy-independent best rule or a learned graph-model
+improvement. Freeze settings before fresh-batch validation. Do not derive
+full-population recall, score correlations, PR curves, or false-negative rates
+from the selected-union-only labels.
+
+The aggregate download does not identify the exact cause of each unknown eSEN
+label. Inspect `esen_labels.csv`, `esen_hull_coverage.csv`, and prediction status
+on SOC before scaling up. Import success alone does not prove every reference
+prediction/hull succeeded. Recorded runtime rows omit hard-killed allocations
+whose completion timer was never written, so their sum is not total eSEN GPU
+time. Original protocol implementation notes and earlier studies follow below.
+
+## Independent proxy comparison implementation - 24 October 2026
+
+The new staged workflow in `../reference_set_comparison/` compares chemical
+references, kNN (5, 10, 15, 25), and deduplicated unions at top-1%, 5%, and 10%
+budgets. It reuses the new reference export's exact checkpoint/scaler/preprocessing,
+and constructs separate fixed, model-native MEGNet and eSEN hulls from all relevant
+MP2023 reference structures. It does not change the historical results below.
+
+The actual sampled release batches 20-29 were checked locally: 8,113 source
+rows, 6,258 eligible VUN candidates, and 1,855 VUN exclusions. Offline tests cover
+the real JEPA architecture on untrained fixtures, deterministic retrieval,
+selection/uniqueness, fixed-hull calculations, missing-label policy, and resumed
+proxy caches using synthetic predictions. These are implementation checks.
+
+**Historical implementation snapshot (before the completed SOC run above): no
+public MEGNet/eSEN weights were downloaded or run on the laptop, and production
+results were not yet available.** The SOC
+guide `../reference_set_comparison/COMMANDS_TO_EXECUTE.md` includes isolated
+environments, real-weight smoke tests, staged Slurm commands, cache resumption,
+and result retrieval. The batch range is configurable; 20-29 is the initial run.
+
 > **Correction — 23 October 2026.** The learned GNN/MPNN results in the earlier
 > GNN section are invalid for the new reference-selection question. Those models
 > predicted candidate stability and used candidate stability labels for training

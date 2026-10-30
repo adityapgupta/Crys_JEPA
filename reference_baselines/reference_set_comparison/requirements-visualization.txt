@@ -1,0 +1,4 @@
+# Optional notebook-only dependencies; no changes to the SOC inference environments.
+umap-learn>=0.5.6,<0.6
+matplotlib>=3.7
+plotly>=5.22

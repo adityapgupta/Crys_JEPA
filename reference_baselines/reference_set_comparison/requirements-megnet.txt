@@ -1,0 +1,13 @@
+# Current PyG MatGL; do not combine with legacy eSEN's torch/numpy constraints.
+matgl==4.1.0
+numpy==2.2.6
+pandas==2.2.3
+scipy==1.15.3
+PyYAML==6.0.2
+certifi==2025.1.31
+lmdb==1.6.2
+huggingface-hub==0.30.2
+ase==3.24.0
+torch-geometric==2.6.1
+# MatGL requires pymatgen-core>=2026.5.18; freeze the resolved environment
+# after the real-weight smoke test rather than mixing pymatgen distributions.
