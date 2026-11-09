@@ -29,6 +29,7 @@ absolute pass rates with the historical MatterSim studies.
 | Space-group concentration | Whether individual space groups concentrate in a small number of embedding communities | 61 of 73 eligible groups had BH-adjusted q ≤ 0.05 under the unconditional label-permutation null; concentration varied strongly by group | Some symmetry labels are non-randomly concentrated in this graph partition | Space group is not a structural prototype; the reported null is not conditioned on energy or composition |
 | Historical candidate-stability GNN pilot | Whether a cosine reference graph improved a learned candidate-stability model over a no-graph control | Mean 5% validation yields were about 60.2% no-graph, 60.0% GCN, and 59.7% MPNN; no graph advantage appeared | The pipeline ran, but neighbour message passing did not show value over learned readout | This pilot trained/selected with candidate labels and its reported validation overlaps checkpoint selection; it is **not valid evidence** for the newer reference-utility question |
 | Reference-utility GNN with explicit edge attributes | Whether embedding similarity, same-space-group, and electronegativity distance improve the fixed physical reference graph | Mean reserved 5% yield: scalar 44.4%, real attributes 44.4%, shuffled attributes 44.2%, no-message readout 44.2%; all nine real-versus-scalar intervals include zero | These attributes add no demonstrated value on this topology; graph propagation also adds no measurable value | Internal engineering holdout, MatterSim labels, fixed topology, and coarse feature definitions |
+| Reference-utility GNN with non-redundant relational edges | Whether edge features chosen to be independent of the embeddings — SOAP geometric distance, co-occurrence PMI, and convex-hull tie-line compatibility — improve the fixed physical graph | Mean reserved 5% yield ≈ 44.4% for every variant; all variant-minus-scalar differences within ±0.7 points with no interval excluding zero; `rich` does not beat its shuffled control (1/9); `readout` ≈ the GNNs | Strengthens the edge-attribute null by removing the redundancy objection; the bottleneck is the graph wiring / propagation, not the edge information | Same internal holdout, MatterSim labels, and fixed topology; connectivity not yet varied |
 | Chemical, kNN and union screening under MEGNet/eSEN | Whether changing the frozen-JEPA reference pool improves screening under two additional stability proxies | At unique top 1%: MEGNet kNN-25 gives 56/62 (90.3%) versus chemical 41/62 (66.1%); eSEN instead gives chemical 37/62 (59.7%) versus kNN-25 28/59 valid labels (47.5%; three unknown) | The benefit of kNN depends on the proxy; the large MEGNet gain is not corroborated by eSEN | One exploratory ten-folder group, reconstructed scaler, missing eSEN labels, and model-based rather than DFT stability |
 
 ## Chemical, kNN and union under MEGNet/eSEN
@@ -75,8 +76,12 @@ for the protocol, coverage bounds, tests, and full results.
    that this is not evidence of better polymorph ranking within a fixed composition.
 3. **Graphs have not yet shown an added screening advantage.** Diffusion and
    conductance baselines did not beat the simple gate; the historical GNN pilot did
-   not beat its no-graph control; and the completed edge-attribute GNN experiment
-   found no reliable value from its real edge attributes or message passing.
+   not beat its no-graph control; the edge-attribute GNN experiment found no reliable
+   value from its real edge attributes or message passing; and the follow-up
+   relational-edge experiment — using edge features deliberately independent of the
+   embeddings — found no value either. Across both edge experiments the no-message
+   `readout` control matched the GNNs, which points to the graph wiring itself, not
+   the edge information, as the thing still worth varying.
 4. **All stability conclusions remain proxy conclusions.** The work supports
    comparative screening under MatterSim, MEGNet, or eSEN and their respective
    evaluation hulls, not a claim that selected materials are synthesizable or
@@ -87,8 +92,10 @@ for the protocol, coverage bounds, tests, and full results.
 
 - [MEGNet/eSEN reference-selection comparison and results](EXPERIMENT_REPORT.md)
 - [Executed proxy-comparison and embedding-visualisation notebook](../reference_set_comparison/inspect_train.ipynb)
-- [Latest edge-attribute experiment in simple English](edge_attribute_experiment_plain_english.md)
+- [Edge-attribute experiment in simple English](edge_attribute_experiment_plain_english.md)
 - [Full edge-attribute protocol](edge_attribute_reference_gnn.md)
+- [Relational-edge experiment in simple English](relational_edge_experiment_plain_english.md)
+- [Full relational-edge protocol](relational_edge_reference_gnn.md)
 - [Fixed test comparison](heldout_experiment.md)
 - [Fresh MatterSim validation](mattersim_validation.md)
 - [Mean and reference-pool ablations](mean_ablation.md)

@@ -1,6 +1,6 @@
 # Relational edge-feature reference GNN
 
-> **Status:** **DONE — null result (owned by Aditi).** Second experiment in the
+> **Status:** **DONE — null result.** Second experiment in the
 > inductive-bias GNN series, following the edge-attribute experiment
 > ([edge_attribute_reference_gnn.md](edge_attribute_reference_gnn.md), also null).
 > Non-redundant relational edge features (element-blind SOAP geometry, co-occurrence
