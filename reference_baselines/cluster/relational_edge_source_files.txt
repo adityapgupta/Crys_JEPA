@@ -1,0 +1,15 @@
+# Source files for the relational edge-feature experiment (scp to the cluster checkout).
+# Paths are relative to the repository root. The reused edge-attribute model file is
+# included because the relational model imports its gate/attention layers.
+reference_baselines/datasets/relational_edge_reference_graph.py
+reference_baselines/graphs/relational_edge_features.py
+reference_baselines/graphs/build_reference_hull_energies.py
+reference_baselines/models/edge_attribute_reference_gnn.py
+reference_baselines/models/relational_edge_reference_gnn.py
+reference_baselines/training/train_relational_edge_reference_gnn.py
+reference_baselines/evaluation/relational_edge_reference_gnn.py
+reference_baselines/configs/relational_edge_reference_gnn.toml
+reference_baselines/tests/test_relational_edge_reference_gnn.py
+reference_baselines/cluster/run_relational_edge_reference_gnn.sh
+reference_baselines/cluster/relational_edge_reference_gnn.slurm
+reference_baselines/cluster/relational_edge_train_array.slurm
