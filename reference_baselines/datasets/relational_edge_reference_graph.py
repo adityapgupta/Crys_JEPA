@@ -8,6 +8,13 @@ information that is **not** in the Crys-JEPA node embedding (see
   1. ``cooccurrence_pmi``    ``log(N * c_ij / (c_i c_j))``  popularity-normalised competition
   2. ``hull_compatibility``  ``1`` if i,j share a stable hull tie-line, else ``0``
 
+All three raw features are **z-standardised over the physical (fit-side) edge set**
+before they reach the edge encoder: per-feature mean/std are computed once over the
+real feature rows of every physical edge (``_standardization``) and subtracted /
+divided out.  Standardisation uses known-crystal edge data only -- no candidate,
+validation or reserved information enters the statistics.  (The ``scalar`` baseline
+ignores ``edge_attr`` entirely, so it is unaffected by standardisation.)
+
 Topology, nodes, pools, decomposition targets and splits are unchanged from the
 reference GNN; only edge information varies.  Features use known-crystal data and
 fit-side decompositions only -- candidate outcomes and reserved labels are never
@@ -16,9 +23,13 @@ read.
 ``edge_mode`` controls how the feature rows are filled:
   ``default``   -- the real feature row of each edge
   ``shuffled``  -- each edge is given the **complete, self-consistent feature row of
-                   another physical edge**, chosen by a fixed global edge permutation.
-                   This preserves the marginal distribution of feature rows and only
-                   breaks the alignment between a row and its edge (negative control).
+                   another physical edge**, chosen by a fixed permutation **over
+                   undirected pairs**.  Because all three features are symmetric, the
+                   two directions ``(i, j)`` and ``(j, i)`` of a physical edge share one
+                   feature row; permuting whole undirected pairs keeps that symmetry
+                   intact (both directions receive the same shuffled row) while breaking
+                   the alignment between a row and its edge (negative control).  This
+                   preserves the marginal distribution of feature rows.
   ``redundant`` -- slot 0 holds embedding cosine (a deliberately redundant feature),
                    slots 1-2 are zero (re-confirms redundant features add nothing)
 
@@ -97,6 +108,46 @@ def _physical_edges():
     return counts, edge_i, edge_j, ordinal, size
 
 
+def undirected_pair_plan(edge_i, edge_j, seed):
+    """Permutation plan over **undirected** physical edges.
+
+    Returns ``(pair_id, pair_rep, pair_perm)`` where ``pair_id[k]`` is the undirected
+    pair index of directed edge ``k``, ``pair_rep[p]`` is a representative directed-edge
+    index for pair ``p`` (used to recover real endpoints), and ``pair_perm`` is a fixed
+    random permutation of the pairs.  ``(i, j)`` and ``(j, i)`` map to the same pair, so
+    shuffling by pair keeps the two directions' feature rows identical.
+    """
+    edge_i = np.asarray(edge_i, dtype=np.int64)
+    edge_j = np.asarray(edge_j, dtype=np.int64)
+    key = np.minimum(edge_i, edge_j) * REFERENCE_COUNT + np.maximum(edge_i, edge_j)
+    _, first_idx, pair_id = np.unique(key, return_index=True, return_inverse=True)
+    pair_id = np.asarray(pair_id, dtype=np.int64).ravel()
+    pair_rep = first_idx.astype(np.int64)
+    pair_perm = np.random.default_rng(seed).permutation(len(pair_rep))
+    return pair_id, pair_rep, pair_perm
+
+
+@lru_cache(maxsize=None)
+def _standardization():
+    """Per-feature mean/std of the real feature rows over all physical edges."""
+    counts, edge_i, edge_j, _ordinal, _size = _physical_edges()
+    soap = _soap()
+    frequency, normaliser = _frequency()
+    hull = _hull()
+    count = _lookup(counts, edge_i, edge_j)
+    feats = np.column_stack(
+        [
+            soap_distance(soap, edge_i, edge_j),
+            cooccurrence_pmi(count, frequency, normaliser, edge_i, edge_j),
+            hull_compatibility(hull, edge_i, edge_j),
+        ]
+    )
+    mean = feats.mean(axis=0)
+    std = feats.std(axis=0)
+    std = np.where(std < 1e-6, 1.0, std)  # guard constant features
+    return mean.astype(np.float64), std.astype(np.float64)
+
+
 def soap_distance(soap, source_global, target_global):
     """1 - cosine of unit-normalised SOAP fingerprints; in [0, 2]."""
     dot = np.sum(soap[source_global] * soap[target_global], axis=1)
@@ -143,20 +194,27 @@ class RelationalEdgePoolDataset(PoolDataset):
         self.counts, self.edge_i, self.edge_j, self.ordinal, self.edge_total = _physical_edges()
         if len(self.soap) != REFERENCE_COUNT or len(self.frequency) != REFERENCE_COUNT:
             raise ValueError("SOAP / frequency arrays are not aligned with the references")
-        # Global permutation of complete edge rows (identity unless shuffled).
+        self.feat_mean, self.feat_std = _standardization()
+        # Permutation over undirected pairs (built only when shuffling).
         if edge_mode == "shuffled":
-            self.edge_perm = np.random.default_rng(edge_seed).permutation(self.edge_total)
-        else:
-            self.edge_perm = np.arange(self.edge_total)
+            self.pair_id, self.pair_rep, self.pair_perm = undirected_pair_plan(
+                self.edge_i, self.edge_j, edge_seed
+            )
 
     def _reassign_shuffled(self, gi, gj):
-        """Map each edge to the endpoints of another physical edge (its permuted row)."""
+        """Map each edge to the endpoints of another physical **undirected pair**.
+
+        ``(i, j)`` and ``(j, i)`` share an undirected pair id, so both receive the same
+        permuted pair -- the shuffled feature rows stay symmetric, matching the real data.
+        """
         order = _lookup(self.ordinal, gi, gj).astype(np.int64)  # 1-based ordinal, 0 if absent
         present = order > 0
-        permuted = self.edge_perm[np.where(present, order - 1, 0)]
+        directed = np.where(present, order - 1, 0)
+        permuted_pair = self.pair_perm[self.pair_id[directed]]
+        rep = self.pair_rep[permuted_pair]
         return (
-            np.where(present, self.edge_i[permuted], gi),
-            np.where(present, self.edge_j[permuted], gj),
+            np.where(present, self.edge_i[rep], gi),
+            np.where(present, self.edge_j[rep], gj),
         )
 
     def _features(self, item):
@@ -174,13 +232,15 @@ class RelationalEdgePoolDataset(PoolDataset):
         if self.edge_mode == "shuffled":
             gi, gj = self._reassign_shuffled(gi, gj)
         counts = _lookup(self.counts, gi, gj)  # global co-occurrence count c_ij
-        return np.column_stack(
+        features = np.column_stack(
             [
                 soap_distance(self.soap, gi, gj),
                 cooccurrence_pmi(counts, self.frequency, self.normaliser, gi, gj),
                 hull_compatibility(self.hull, gi, gj),
             ]
-        ).astype(np.float32)
+        )
+        features = (features - self.feat_mean) / self.feat_std  # z-standardise over fit edges
+        return features.astype(np.float32)
 
     def __getitem__(self, index):
         item = super().__getitem__(index)

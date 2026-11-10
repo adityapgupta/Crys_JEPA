@@ -63,6 +63,12 @@ train() {
   run "${command[@]}"
 }
 
+probe() {
+  # Embedding-recoverability probe: are the edge features recoverable from the node
+  # embeddings? Torch-free (numpy/scipy); reads known-crystal arrays only, no reserved data.
+  run "$PYTHON" -m reference_baselines.evaluation.embedding_recoverability_probe
+}
+
 prepare() {
   run "$PYTHON" -m reference_baselines.evaluation.relational_edge_reference_gnn --config "$CONFIG" --prepare
 }
@@ -89,11 +95,12 @@ case "$STAGE" in
   precompute) precompute ;;
   smoke) check_inputs; smoke ;;
   train) check_inputs; train ;;
+  probe) check_inputs; probe ;;
   prepare) check_inputs; prepare ;;
   evaluate) check_inputs; evaluate ;;
   *)
     echo "Unknown STAGE: $STAGE" >&2
-    echo "Use tests, check, soap, precompute, smoke, train, prepare, or evaluate." >&2
+    echo "Use tests, check, soap, precompute, smoke, train, probe, prepare, or evaluate." >&2
     exit 1
     ;;
 esac

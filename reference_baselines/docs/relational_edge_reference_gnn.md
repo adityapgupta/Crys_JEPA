@@ -1,13 +1,30 @@
 # Relational edge-feature reference GNN
 
-> **Status:** **DONE — null result.** Second experiment in the
+> **Status:** **DONE — null result (corrected controls).** Second experiment in the
 > inductive-bias GNN series, following the edge-attribute experiment
 > ([edge_attribute_reference_gnn.md](edge_attribute_reference_gnn.md), also null).
-> Non-redundant relational edge features (element-blind SOAP geometry, co-occurrence
-> PMI, convex-hull tie-line compatibility) add **no screening gain** over the scalar
-> node-only baseline on the reserved partition; the pre-registered null branch holds.
-> See [Results](#results). The design, controls and pre-registered criteria below
-> were fixed before the reserved partition was opened.
+> It tests whether element-blind SOAP geometry, co-occurrence PMI, and convex-hull
+> tie-line compatibility — edge features **constructed to be independent of the node
+> embedding** — improve screening over the scalar node-only baseline on the reserved
+> partition.
+>
+> The first run (commit `cdfe23e`) returned a narrow null but had two control defects:
+> the shuffled control permuted *directed* edges independently, breaking the symmetry
+> of the (symmetric) features, and the documented fit-edge standardisation was not
+> implemented. Both were fixed in `datasets/relational_edge_reference_graph.py` and the
+> full experiment was **re-run from scratch**. The corrected result is the same — and
+> cleaner: no variant reliably beats the scalar baseline, and with the symmetric shuffle
+> `rich` no longer beats its own scrambled control. See [Results](#results).
+>
+> Scope of the claim: this is a **"no reliable improvement"** result on one fixed
+> topology, not a proof of equivalence. "Independent" started as independent *by
+> construction of the input*; a recovery probe ([below](#recoverability-probe)) now
+> measures it, and it holds cleanly for geometry (SOAP R²=0.05), mostly for
+> decomposition PMI (R²=0.18), and only partially for hull compatibility (AUC=0.71 —
+> meaningfully recoverable from the embeddings). The design and success criteria below
+> were written before the reserved partition was opened, though Git does not
+> independently witness that ordering (commit `cdfe23e` already held both criteria and
+> the first results).
 
 ## Why this experiment (the lesson from experiment 1)
 
@@ -28,10 +45,20 @@ Feeding a GNN edge features that are functions of its own node features adds lit
 information to pass along. This experiment fixes that with a single design
 principle for edge features:
 
-> **Non-redundant and relational.** Each edge feature must draw on information that
-> is **not present in the Crys-JEPA node embeddings** (independent geometry,
-> phase-diagram structure, decomposition statistics), and must describe a
-> **relationship between two references** that bears on decomposition / competition.
+> **Independently sourced and relational.** Each edge feature is *computed* from a
+> source outside the Crys-JEPA node embeddings (independent geometry, phase-diagram
+> structure, decomposition statistics), and must describe a **relationship between two
+> references** that bears on decomposition / competition.
+
+Note the scope of the claim: independence here is **by construction of the input**.
+We now also measure it directly with an embedding-recoverability probe
+([below](#recoverability-probe)): SOAP distance is essentially unrecoverable from the
+endpoint embeddings (R²=0.05), PMI is weakly recoverable (R²=0.18 — expected, since it
+reweights the same co-occurrence counts the scalar edge already carries), and hull
+compatibility is partially recoverable (AUC=0.71). So "non-redundant" holds cleanly for
+geometry, mostly for PMI, and only partially for the thermodynamic feature — and in
+every case this is "drawn from a largely independent source," not "proven to add
+screening value," which the Results section addresses separately.
 
 A second lesson constrains the conclusion we can draw: in experiment 1 the
 no-message-passing `readout` control matched the full GNN. So edge features alone
@@ -113,7 +140,7 @@ Each variant runs GCN / GAT / GraphSAGE × 3 seeds, except `readout` (architectu
 | `cooc` | + co-occurrence PMI | value of popularity-normalised competition |
 | `phase` | + hull compatibility | value of phase-diagram competition |
 | `rich` | + all three | combined non-redundant edge value |
-| `shuffled` | `rich` features permuted across edges | are the features real signal? |
+| `shuffled` | `rich` features permuted across undirected edge pairs | are the features real signal? |
 | `readout` | all three at readout, no message passing | does propagation add value? |
 | `redundant` | + embedding cosine only | re-confirms redundant features add nothing |
 
@@ -143,41 +170,114 @@ new-connectivity experiment rather than more features.
 
 ## Results
 
-Reserved partition (≈35.3k candidates), primary budget **5%**, 3 models × 3 seeds
+Reserved partition (35,336 candidates), primary budget **5%**, 3 models × 3 seeds
 per variant, 1000-draw paired chemical-system bootstrap. Scalar baseline yield
-≈ **44.4%** at 5% (in line with the edge-attribute experiment).
+**44.65%** at 5%. (Edge-reading variant means at 5%: `geom` 44.26%, `cooc` 44.49%,
+`phase` 44.27%, `rich` 44.50%, `shuffled` 44.94%, `readout` 44.53%, `redundant` 44.67%.)
 
-**No variant beats the scalar baseline.** Mean yield delta vs `scalar`, averaged
-over the 9 model×seed runs, with the count of runs whose bootstrap CI excludes zero
-in the treatment's favour:
+*On comparability to experiment 1.* The two experiments share nodes, pools, topology,
+targets, checkpoint rule and ranking, but are **not identical**: this one uses batch
+size 64, the edge-attribute experiment used 32, and the scalar baselines differ
+accordingly (44.65% here vs 44.41% there). They are closely comparable, not a
+drop-in match; treat small cross-experiment deltas with that caveat. (Scalar also moved
+from 44.74% in the first, pre-fix run of *this* experiment to 44.65% here; it never
+reads `edge_attr`, so that ≈0.1 pp is ordinary CPU-training nondeterminism across nodes
+— a useful read on the run-to-run noise floor against which the deltas below sit.)
+
+**No variant reliably beat the scalar baseline.** Mean yield delta vs `scalar`,
+averaged over the 9 model×seed runs, with the count of runs whose bootstrap CI excludes
+zero in the treatment's favour:
 
 | Contrast | Mean Δyield | Runs favouring treatment (of 9) |
 |---|---|---|
-| `rich − scalar` (all three features) | −0.24 pp | 0 |
-| `geom − scalar` (SOAP distance) | −0.69 pp | 0 (1 run significantly *worse*) |
-| `cooc − scalar` (co-occurrence PMI) | −0.32 pp | 0 |
-| `phase − scalar` (hull compatibility) | −0.03 pp | 0 |
-| `rich − shuffled` (features real?) | +0.40 pp | 1 |
-| `rich − readout` (propagation adds value?) | −0.16 pp | 0 |
-| `readout − scalar` (control) | −0.08 pp | 0 |
-| `redundant − scalar` (control) | −0.07 pp | 0 |
+| `rich − scalar` (all three features) | −0.14 pp | 0 |
+| `geom − scalar` (SOAP distance) | −0.39 pp | 0 |
+| `cooc − scalar` (co-occurrence PMI) | −0.16 pp | 0 |
+| `phase − scalar` (hull compatibility) | −0.38 pp | 0 |
+| `rich − shuffled` (features real?) | −0.43 pp | 0 (1 run significantly *worse*) |
+| `rich − readout` (propagation adds value?) | −0.03 pp | 0 |
+| `readout − scalar` (control) | −0.12 pp | 0 |
+| `redundant − scalar` (control) | +0.03 pp | 0 |
 
-Every delta is within ±0.7 pp of zero, and no contrast clears the pre-registered
-bar. `rich` does not reliably beat its own `shuffled` control (1/9), and `readout`
-≈ the GNNs (`rich − readout` ≈ 0), repeating experiment 1.
+Every delta is within ±0.5 pp of zero and no contrast clears the success bar. The
+corrected (symmetric) shuffle sharpens the "are the features real?" test: `shuffled`
+now scores *highest* of all variants, so `rich − shuffled` is **−0.43 pp** (one run
+significantly worse, none favouring `rich`) — the features do not beat their own
+scrambled version. For context, the standing-best non-GNN baseline (`angle_gate_1deg`)
+scores **45.81%** at 5% — above every GNN variant mean here, so none of these variants
+beats the real screening bar regardless of the CIs.
 
-**Conclusion (the pre-registered null branch).** Even deliberately non-redundant,
-relational edge features — element-blind SOAP geometry (independent of the JEPA
-embedding), popularity-normalised decomposition PMI, and convex-hull tie-line
-compatibility — carry **no screening signal beyond the Crys-JEPA node embeddings**.
-Combined with `readout ≈ GNN`, the bottleneck is not the edge *information* but the
-fixed topology / message-passing step. This is the stronger form of the experiment-1
-null (it also removes the redundancy objection), and it motivates the
-**connectivity** arm — building the graph from phase/geometry relations — rather
-than further edge features.
+**What this supports, and what it does not.** The analysis shows *non-significance*:
+no tested variant demonstrated a reliable gain over `scalar` on this fixed topology.
+It does **not** establish *equivalence* — the study reports per-run CI counts and an
+average delta, but no aggregate uncertainty interval or non-inferiority / equivalence
+test, so it cannot claim the features carry zero complementary information. Likewise
+`readout ≈ GNN` is *consistent with* a topology/propagation bottleneck but does not
+prove it. A fair summary:
 
-Artifacts: `results/relational_edge_reference_gnn/reserved/{controlled_comparisons.csv,
-metrics.csv, scores.csv, evaluation.json}`.
+> On the reserved MatterSim-proxy screen, none of the tested SOAP-, PMI-, or
+> hull-compatibility edge-feature variants showed a reliable improvement over the
+> scalar co-occurrence baseline on the fixed physical topology. This motivates testing
+> alternative connectivity, but does not establish that the features contain no
+> complementary information or that topology is definitively the bottleneck.
+
+This remains the weaker (and defensible) form of the experiment-1 null, and it
+motivates the **connectivity** arm — building the graph from phase/geometry relations —
+as the next test rather than further edge features.
+
+Artifacts (corrected-control run): `results/relational_edge_reference_gnn/reserved/{controlled_comparisons.csv,
+metrics.csv, scores.csv, evaluation.json}`. The superseded pre-fix artifacts are kept
+alongside in `runs_prefix/` and `reserved_prefix/`.
+
+### Recoverability probe
+
+The "independent by construction" claim was tested directly:
+`evaluation/embedding_recoverability_probe.py` tries to predict each edge feature from
+the two endpoint Crys-JEPA embeddings. Inputs are symmetric in `(i,j)`
+(`[emb_i+emb_j, |emb_i−emb_j|]`, 1024-D) and the split is **reference-disjoint** — an
+edge is a test edge only when *both* endpoints are held-out references, so no test
+reference's embedding is seen in training. Closed-form ridge, 5 split seeds, reported on
+the held-out edges. Low score ⇒ the embeddings cannot reproduce the feature ⇒ genuinely
+non-redundant; high score ⇒ the feature is already latent in the embeddings.
+
+| Edge feature | Metric | Score (mean ± std) | Reading |
+|---|---|---|---|
+| SOAP distance | test R² | **0.05 ± 0.06** | essentially unrecoverable — genuinely non-redundant |
+| Co-occurrence PMI | test R² | **0.18 ± 0.06** | weakly recoverable — mostly independent |
+| Hull compatibility | test ROC-AUC | **0.71 ± 0.03** | clearly above chance — *partially* latent in the embeddings |
+
+(16,041 train / 1,120 held-out edges per split; `ridge_lambda=10`.) This is the honest
+upgrade over the construction-only claim: geometry is independent as designed, PMI is
+mostly so (its residual recoverability is expected — it reweights the same counts the
+scalar edge carries), and hull compatibility is the one feature the embeddings can
+already predict above chance. That ordering is itself consistent with the null: the
+feature with the most to add that *isn't* already in the model (geometry) still produced
+no screening gain, and the one with real overlap (thermodynamics) could not have added
+much. It does **not** change the result — recoverability bounds how *new* a feature is,
+not whether it helps ranking — but it removes the experiment-1 escape hatch ("the
+features were just redundant") for geometry and, largely, PMI. Artifact:
+`results/relational_edge_reference_gnn/recoverability_probe.json`.
+
+## Reproducing
+
+The shuffle and standardisation fixes change the training inputs, so the run was
+regenerated from scratch in a fresh run directory (the training script refuses to
+reuse a directory whose recorded source hashes changed). No precompute changes are
+needed — standardisation reuses the SOAP / frequency / hull arrays already loaded. To
+reproduce (on the cluster, torch required):
+
+```bash
+# from the repo root; retire any prior runs/ and reserved/ first.
+sbatch --array=0-21 reference_baselines/cluster/relational_edge_train_array.slurm   # ~5 h; %8 to cap concurrency
+# once all 66 runs carry complete.json, on a compute node (login node has no torch):
+sbatch --export=ALL,STAGE=prepare  reference_baselines/cluster/relational_edge_reference_gnn.slurm
+sbatch --export=ALL,STAGE=evaluate reference_baselines/cluster/relational_edge_reference_gnn.slurm   # opens reserved
+```
+
+Point the array at a clean `runs/` directory (move or delete the pre-fix one first).
+Rough cost: ~1 h median per model×seed run (37–92 min observed); each array task runs
+3 seeds (~2–5 h), so with 8 concurrent tasks the training wall-clock is ~6–10 h plus
+queue and venv build, then prepare/evaluate.
 
 ## Prerequisites and leakage guards
 
@@ -197,9 +297,11 @@ metrics.csv, scores.csv, evaluation.json}`.
   `dscribe`/`ase`.
 
 All edge features use **known-crystal properties and fit-side decompositions only** —
-never candidate outcomes, validation, or reserved labels. Splits, pools, targets,
-checkpoint rule (lowest validation reference BCE) and candidate score are identical
-to experiment 1, so the only moving part is the edge information.
+never candidate outcomes, validation, or reserved labels. Within this experiment the
+only moving part across variants is the edge information: splits, pools, nodes,
+topology, targets, checkpoint rule (lowest validation reference BCE) and candidate
+score are all shared. These structural components also match experiment 1, though the
+two experiments are not a drop-in match (this one trains with batch size 64 vs 32).
 
 ## Assumptions and limits
 

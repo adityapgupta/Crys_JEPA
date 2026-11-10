@@ -1,8 +1,9 @@
 # Did non-redundant relational GNN edges improve screening?
 
-**Experiment status:** complete
+**Experiment status:** complete — re-run from scratch after two controls were corrected
 
-**Result:** no reliable improvement was demonstrated
+**Result:** no reliable improvement was demonstrated (and with the corrected controls,
+the new edge features do not even beat their own shuffled version)
 
 ## The short version
 
@@ -12,12 +13,24 @@ no gain — but those features could all be re-derived from the node embeddings 
 model already had, so a skeptic could dismiss the null as "of course, the features
 were redundant."
 
-Here we fixed that objection. We added three edge features **deliberately chosen to
-carry information the Crys-JEPA embeddings do not already encode**, then re-ran the
-same test. The result still held: across three model types and three seeds, the new
-edge features performed about the same as the plain baseline, their own shuffled
-version, and a control that does no message passing. **The stronger conclusion:
-even genuinely complementary edge information adds no screening value on this graph.**
+Here we targeted that objection. We added three edge features **drawn from sources
+the Crys-JEPA embeddings do not use** (independent geometry, decomposition statistics,
+and phase-diagram thermodynamics), then re-ran the same test (and re-ran it again from
+scratch after fixing two control bugs). The result held: across three model types and
+three seeds, the new edge features performed about the same as the plain baseline — and
+with the corrected controls, no better than their own shuffled version or a control
+that does no message passing. **The reading: adding this edge information did not
+improve screening on this graph** — a result consistent with, but not proof of, the
+idea that the limitation is the graph's wiring rather than the edge information.
+
+> **Caveat on "independent."** The features are independent *by how they're built* —
+> and we also ran a test (a "recoverability probe") that tries to reconstruct each
+> feature from the embeddings. Geometry (SOAP) came back essentially unrecoverable, so
+> it's genuinely new information; the decomposition statistic (PMI) is mostly new; the
+> thermodynamic feature (hull compatibility) is *partly* already inside the embeddings.
+> So the "new information" claim holds strongly for geometry, mostly for PMI, and only
+> partly for thermodynamics. Separately: this is a "no reliable improvement" result, not
+> a proof that the features are worthless — those are different claims.
 
 ## What we were trying to improve
 
@@ -60,7 +73,7 @@ graph.
 | `cooc` | + co-occurrence PMI | does popularity-normalised competition help? |
 | `phase` | + hull compatibility | does phase-diagram competition help? |
 | `rich` | + all three | do the new features help combined? |
-| `shuffled` | the `rich` features permuted across edges | are the features real signal, not noise? |
+| `shuffled` | the `rich` features permuted across undirected edge pairs | are the features real signal, not noise? |
 | `readout` | features visible, but no message passing | is graph propagation itself useful? |
 | `redundant` | + embedding cosine only | re-confirms a known-redundant feature adds nothing |
 
@@ -75,40 +88,56 @@ every method.
 
 ## Result
 
-The reserved partition contained 35,336 candidates; at the 5% budget each method
-selects 1,766. The scalar baseline passed ≈ 44.4% — identical to the edge-attribute
-experiment's baseline, which confirms this ran on the same harness and the numbers
-are directly comparable.
+> **Note:** these are the corrected-control numbers. The first run had two control
+> bugs — the "shuffled" baseline scrambled edge directions independently (breaking the
+> symmetry of the features) and the planned feature standardization was never applied.
+> Both were fixed and the whole experiment re-run from scratch. The conclusion didn't
+> change; the shuffled-control comparison actually got cleaner.
 
-**No variant beat the baseline.** Mean yield difference versus `scalar`, averaged
-over the nine model×seed runs, with how many of those nine bootstrap confidence
-intervals exclude zero in the variant's favour:
+The reserved partition contained 35,336 candidates; at the 5% budget each method
+selects 1,766. The scalar baseline passed **44.65%**. (The edge-attribute experiment's
+baseline was 44.41%; the two are close but not identical — this run used a larger
+training batch size — so they're comparable rather than a drop-in match.)
+
+**No variant beat the baseline.** Mean yield difference versus `scalar`, averaged over
+the nine model×seed runs, with how many of those nine bootstrap confidence intervals
+exclude zero in the variant's favour:
 
 | Comparison | Mean yield difference | Runs that beat the control (of 9) |
 |---|---:|---:|
-| `rich` − `scalar` (all three features) | −0.24 points | 0 |
-| `geom` − `scalar` (SOAP distance) | −0.69 points | 0 (1 run was worse) |
-| `cooc` − `scalar` (co-occurrence PMI) | −0.32 points | 0 |
-| `phase` − `scalar` (hull compatibility) | −0.03 points | 0 |
-| `rich` − `shuffled` (are features real?) | +0.40 points | 1 |
-| `rich` − `readout` (does propagation help?) | −0.16 points | 0 |
-| `readout` − `scalar` (control) | −0.08 points | 0 |
-| `redundant` − `scalar` (control) | −0.07 points | 0 |
+| `rich` − `scalar` (all three features) | −0.14 points | 0 |
+| `geom` − `scalar` (SOAP distance) | −0.39 points | 0 |
+| `cooc` − `scalar` (co-occurrence PMI) | −0.16 points | 0 |
+| `phase` − `scalar` (hull compatibility) | −0.38 points | 0 |
+| `rich` − `shuffled` (are features real?) | −0.43 points | 0 (1 run was worse) |
+| `rich` − `readout` (does propagation help?) | −0.03 points | 0 |
+| `readout` − `scalar` (control) | −0.12 points | 0 |
+| `redundant` − `scalar` (control) | +0.03 points | 0 |
 
-Every difference is within ±0.7 of a percentage point of zero, and essentially no
-confidence interval excludes zero. `rich` does not reliably beat even its own
-shuffled version (1 of 9). And `readout` — which turns message passing off — matches
-the full GNNs (`rich` − `readout` ≈ 0).
+Every difference is within ±0.5 of a percentage point of zero, and essentially no
+confidence interval excludes zero. Tellingly, with the fixed (symmetry-preserving)
+shuffle, the scrambled `shuffled` version actually scored a touch *higher* than
+`rich` — so `rich` does not beat its own shuffled control (0 of 9 favour it, 1 run
+worse). And `readout` — which turns message passing off — matches the full GNNs
+(`rich` − `readout` ≈ 0). For reference, the best simple non-GNN rule
+(`angle_gate_1deg`) scores 45.81% — above every GNN variant here — so none of these
+variants cleared the real screening bar either.
 
 ## What the experiment shows
 
 - Adding independent geometry, decomposition statistics, and phase-diagram
-  compatibility as edge features did **not** improve screening on this graph.
-- This holds even though the features were specifically chosen to be *not* derivable
-  from the embeddings — so it is the stronger form of the edge-attribute null.
+  compatibility as edge features did **not** reliably improve screening on this graph.
+- The features were chosen to be independent *by construction*, and a recoverability
+  probe largely confirmed it: the embeddings cannot reconstruct the geometry feature
+  (R²≈0.05) and only weakly reconstruct the decomposition statistic (R²≈0.18), though
+  they *can* partly predict the thermodynamic feature (AUC≈0.71). So for geometry and
+  mostly PMI, "the model already knew this" is ruled out — yet they still didn't help.
+  And "no reliable improvement" is not the same as "no information" — we showed the
+  former, not the latter.
 - Turning message passing off (`readout`) did about as well as the full GNNs, in
-  both experiments. **This is the key clue: the bottleneck is not the edge
-  information but the graph wiring / propagation step itself.**
+  both experiments. **This is suggestive: it points to the graph wiring / propagation
+  step, rather than the edge information, as the likely limitation — a hypothesis to
+  test next, not something these runs prove.**
 
 ## What it does not show
 

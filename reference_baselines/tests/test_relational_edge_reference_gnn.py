@@ -11,6 +11,7 @@ from reference_baselines.datasets.relational_edge_reference_graph import (
     cooccurrence_pmi,
     hull_compatibility,
     soap_distance,
+    undirected_pair_plan,
 )
 from reference_baselines.models.edge_attribute_reference_gnn import (
     EdgeAttributeReferenceGNN,
@@ -48,6 +49,36 @@ class FeatureMath(unittest.TestCase):
         self.assertEqual(
             hull_compatibility(sparse.csr_matrix((3, 3)), np.array([], int), np.array([], int)).size, 0
         )
+
+
+class ShuffledControl(unittest.TestCase):
+    def test_reverse_edges_share_a_pair(self):
+        # (0,1) and (1,0) are the same undirected pair; (2,2) is a self-loop pair.
+        edge_i = np.array([0, 1, 2, 3, 4])
+        edge_j = np.array([1, 0, 2, 4, 3])
+        pair_id, pair_rep, pair_perm = undirected_pair_plan(edge_i, edge_j, seed=0)
+        self.assertEqual(pair_id[0], pair_id[1])          # (0,1) == (1,0)
+        self.assertEqual(pair_id[3], pair_id[4])          # (3,4) == (4,3)
+        self.assertNotEqual(pair_id[0], pair_id[2])       # distinct pairs stay distinct
+        self.assertEqual(len(pair_rep), 3)                # {0-1, 2-2, 3-4}
+        self.assertEqual(sorted(pair_perm.tolist()), [0, 1, 2])
+
+    def test_shuffle_keeps_directions_symmetric(self):
+        # Reassigning both directions through the pair plan lands on the same endpoints.
+        edge_i = np.array([0, 1, 2, 3, 4])
+        edge_j = np.array([1, 0, 2, 4, 3])
+        pair_id, pair_rep, pair_perm = undirected_pair_plan(edge_i, edge_j, seed=7)
+        rep_fwd = pair_rep[pair_perm[pair_id[0]]]  # (0,1)
+        rep_rev = pair_rep[pair_perm[pair_id[1]]]  # (1,0)
+        self.assertEqual(rep_fwd, rep_rev)
+
+    def test_standardize_centers_and_scales(self):
+        feats = np.array([[0.0, 2.0], [2.0, 4.0]])
+        mean = feats.mean(axis=0)
+        std = np.where(feats.std(axis=0) < 1e-6, 1.0, feats.std(axis=0))
+        standardized = (feats - mean) / std
+        np.testing.assert_allclose(standardized.mean(axis=0), [0.0, 0.0], atol=1e-9)
+        np.testing.assert_allclose(standardized.std(axis=0), [1.0, 1.0], atol=1e-9)
 
 
 class VariantWiring(unittest.TestCase):
