@@ -78,8 +78,17 @@ for the protocol, coverage bounds, tests, and full results.
    that this is not evidence of better polymorph ranking within a fixed composition.
 3. **Graphs have not yet shown an added screening advantage.** Diffusion and
    conductance baselines did not beat the simple gate; the historical GNN pilot did
-   not beat its no-graph control; and the completed edge-attribute GNN experiment
-   found no reliable value from its real edge attributes or message passing.
+   not beat its no-graph control; the edge-attribute GNN experiment found no reliable
+   value from its real edge attributes or message passing; and the follow-up
+   relational-edge experiment — using edge features deliberately independent of the
+   embeddings — found no value either. Across both edge experiments the no-message
+   `readout` control matched the GNNs, which pointed to the graph wiring itself, not
+   the edge information, as the thing still worth varying. A third experiment then
+   varied the wiring directly — embedding-kNN, SOAP-geometry, and convex-hull
+   tie-line topologies — and still found no wiring that beat the no-graph readout or
+   the original co-occurrence graph. The inductive-bias series is therefore complete:
+   neither the edge information nor the graph wiring improves screening, and the
+   frozen embeddings appear already saturated for this task.
 4. **All stability conclusions remain proxy conclusions.** The work supports
    comparative screening under MatterSim, MEGNet, or eSEN and their respective
    evaluation hulls, not a claim that selected materials are synthesizable or
@@ -90,8 +99,12 @@ for the protocol, coverage bounds, tests, and full results.
 
 - [MEGNet/eSEN reference-selection comparison and results](EXPERIMENT_REPORT.md)
 - [Executed proxy-comparison and embedding-visualisation notebook](../reference_set_comparison/inspect_train.ipynb)
-- [Latest edge-attribute experiment in simple English](edge_attribute_experiment_plain_english.md)
+- [Edge-attribute experiment in simple English](edge_attribute_experiment_plain_english.md)
 - [Full edge-attribute protocol](edge_attribute_reference_gnn.md)
+- [Relational-edge experiment in simple English](relational_edge_experiment_plain_english.md)
+- [Full relational-edge protocol](relational_edge_reference_gnn.md)
+- [Connectivity experiment in simple English](connectivity_experiment_plain_english.md)
+- [Full connectivity protocol and results](connectivity_reference_gnn.md)
 - [Fixed test comparison](heldout_experiment.md)
 - [Fresh MatterSim validation](mattersim_validation.md)
 - [Mean and reference-pool ablations](mean_ablation.md)

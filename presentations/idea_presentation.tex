@@ -20,6 +20,7 @@
 \graphicspath{{assets/}{presentations/assets/}{../assets/}}
 \newcommand{\ehull}{E_{\mathrm{hull}}}
 \newcommand{\source}[1]{\par\vspace{1mm}{\scriptsize\color{gray}#1}}
+\newcommand{\key}[1]{\textbf{\textcolor{navy}{#1}}}
 \tikzset{stage/.style={draw=navy,line width=.5pt,rounded corners=1mm,align=center,font=\small,minimum height=9mm,inner sep=2mm},arr/.style={-{Stealth[length=1.5mm]},line width=.6pt,draw=navy}}
 \title{Reference-crystal selection for Crys-JEPA}
 % \subtitle{}
@@ -116,6 +117,26 @@ mp-127 & Na & 0.0123 & 229\\
 \vspace{2mm}
 \noindent\small Same chemistry does not mean the same structure or the same energy.
 \end{columns}
+\end{frame}
+
+\begin{frame}{Analysis on crystal symmetry}
+Crys-JEPA embeddings of the 27{,}136 MP-20 crystals, compared against their
+space-group labels.
+\vspace{2mm}
+\begin{itemize}\setlength\itemsep{4mm}
+\item \textbf{Communities align with symmetry.} Space-group AMI $=$ \key{0.148}
+      ($0 =$ chance) --- higher than the chemical-system AMI of $0.067$; same
+      under Euclidean and cosine graphs.
+\item \textbf{Directly decodable.} A linear probe predicts space group at
+      \key{34.0\%} accuracy, vs.\ $14.3\%$ for guessing the most common group
+      --- well above chance for a many-class label.
+\item \textbf{Most groups concentrate.} \key{61 of 73} space groups cluster into
+      a few communities far more than chance; rock-salt (SG 225) peaks at
+      \key{4.15$\times$}, then SG 216 ($3.19\times$) and SG 187 ($2.90\times$).
+\end{itemize}
+\vspace{4mm}
+\textcolor{navy}{\textbf{Inference:}} the embeddings carry a clear, non-random
+symmetry signal, consistent across all three tests.
 \end{frame}
 
 \begin{frame}{ Comparing the candidate selection from these methods}
@@ -365,6 +386,11 @@ H_m(x_c)=\min_{\substack{\lambda_j\ge0,\ \sum_j\lambda_j=1\\\sum_j\lambda_j x_j=
 \item The atomistic-model comparison favours kNN under MEGNet, but eSEN does not corroborate that gain at 1\%.
 \item The result is a MatterSim screening comparison. It does not prove lower true formation energy.
 \end{itemize}
+\vspace{4mm}
+\textcolor{navy}{\textbf{GNN with edge features.}}
+We added embedding-similarity, shared-space-group and electronegativity edge features
+to the reference graph; in terms of MatterSim screening yield at the fixed budget, they
+added nothing over the plain-weight baseline.
 \end{frame}
 
 \begin{frame}{Current evidence and limits}

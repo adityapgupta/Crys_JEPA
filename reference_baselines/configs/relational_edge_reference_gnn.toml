@@ -1,0 +1,28 @@
+# Relational edge-feature reference GNN experiment.
+# Fixed physical topology; non-redundant relational edge features.
+graph = "physical"
+topology = "Frozen fit-side hull-decomposition co-occurrence graph"
+edge_features = ["soap_distance", "cooccurrence_pmi", "hull_compatibility"]
+
+models = ["gcn", "gat", "sage"]
+variants = ["scalar", "geom", "cooc", "phase", "rich", "shuffled", "readout", "redundant"]
+seeds = [2026, 2027, 2028]
+
+epochs = 20
+early_stop_patience = 4
+retrieval_k = 5
+hidden = 64
+layers = 2
+batch_size = 64
+learning_rate = 0.001
+weight_decay = 0.0001
+threads = 8
+device = "cpu"
+train_limit = 0
+validation_limit = 0
+edge_seed = 2026
+
+primary_budget_percent = 5
+bootstrap_draws = 1000
+checkpoint_rule = "Lowest validation reference BCE"
+claim_limit = "MatterSim proxy; non-redundant relational edge features on fixed physical topology"

@@ -26,7 +26,7 @@ OUT = RESULTS_DIR / "gnn_comparison"
 EXPERIMENT = RESULTS_DIR / "reference_gnn"
 GRAPHS = EXPERIMENT / "graphs"
 SPLITS = ("train", "validation", "reserved")
-GRAPH_NAMES = ("physical", "cosine", "self", "permuted", "none")
+GRAPH_NAMES = ("physical", "cosine", "self", "permuted", "none", "soap", "phase")
 REFERENCE_COUNT = 27136
 TABLE_SCHEMA = "v2"
 

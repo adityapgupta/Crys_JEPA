@@ -1,0 +1,13 @@
+# Source files for the connectivity experiment (scp to the cluster checkout).
+# Paths are relative to the repository root. Training reuses the base trainer
+# (training/train_reference_gnn.py) and base eval helpers (evaluation/reference_gnn.py),
+# which are already on the cluster; only the files below are new or changed.
+# reference_graph.py is included because GRAPH_NAMES now registers soap/phase.
+reference_baselines/datasets/reference_graph.py
+reference_baselines/graphs/connectivity_adjacency.py
+reference_baselines/configs/connectivity_reference_gnn.toml
+reference_baselines/evaluation/connectivity_reference_gnn.py
+reference_baselines/tests/test_connectivity_reference_gnn.py
+reference_baselines/cluster/run_connectivity_reference_gnn.sh
+reference_baselines/cluster/connectivity_reference_gnn.slurm
+reference_baselines/cluster/connectivity_train_array.slurm
