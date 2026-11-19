@@ -29,7 +29,7 @@ absolute pass rates with the historical MatterSim studies.
 | Space-group concentration | Whether individual space groups concentrate in a small number of embedding communities | 61 of 73 eligible groups had BH-adjusted q ≤ 0.05 under the unconditional label-permutation null; concentration varied strongly by group | Some symmetry labels are non-randomly concentrated in this graph partition | Space group is not a structural prototype; the reported null is not conditioned on energy or composition |
 | Historical candidate-stability GNN pilot | Whether a cosine reference graph improved a learned candidate-stability model over a no-graph control | Mean 5% validation yields were about 60.2% no-graph, 60.0% GCN, and 59.7% MPNN; no graph advantage appeared | The pipeline ran, but neighbour message passing did not show value over learned readout | This pilot trained/selected with candidate labels and its reported validation overlaps checkpoint selection; it is **not valid evidence** for the newer reference-utility question |
 | Reference-utility GNN with explicit edge attributes | Whether embedding similarity, same-space-group, and electronegativity distance improve the fixed physical reference graph | Mean reserved 5% yield: scalar 44.4%, real attributes 44.4%, shuffled attributes 44.2%, no-message readout 44.2%; all nine real-versus-scalar intervals include zero | These attributes add no demonstrated value on this topology; graph propagation also adds no measurable value | Internal engineering holdout, MatterSim labels, fixed topology, and coarse feature definitions |
-| Chemical, kNN and union screening under MEGNet/eSEN | Whether changing the frozen-JEPA reference pool improves screening under two additional stability proxies | At unique top 1%: MEGNet kNN-25 gives 56/62 (90.3%) versus chemical 41/62 (66.1%); eSEN instead gives chemical 37/62 (59.7%) versus kNN-25 28/59 valid labels (47.5%; three unknown) | The benefit of kNN depends on the proxy; the large MEGNet gain is not corroborated by eSEN | One exploratory ten-folder group, reconstructed scaler, missing eSEN labels, and model-based rather than DFT stability |
+| Chemical, kNN and union screening under MEGNet/eSEN | Whether changing the frozen-JEPA reference pool improves screening under two additional stability proxies | At top 1% separately per batch (60 total slots): MEGNet kNN-25 gives 51/60 (85.0%) versus chemical 39/60 (65.0%); eSEN gives chemical 36/60 (60.0%) versus kNN-25 26/57 valid labels (45.6%; three unknown) | The benefit of kNN depends on the proxy; the MEGNet gain is not corroborated by eSEN | Ten exploratory batches from one generator, reconstructed scaler, missing eSEN labels, and model-based rather than DFT stability |
 
 ## Chemical, kNN and union under MEGNet/eSEN
 
@@ -38,8 +38,10 @@ against **27,136 MP-20 reference embeddings**, using the same frozen JEPA encode
 and reconstructed scaler. We compared chemical-subsystem references, exact
 embedding kNN with 5/10/15/25 neighbours, and their deduplicated union. Each pool
 gives a mean squared Euclidean embedding-distance score; lower scores rank first.
-The primary budget was **1% with unique refill: 62 crystals per method**; 5% and
-10% budgets and a seeded random ranking were additional checks.
+The primary budget was **1% separately within each batch**, with unique refill:
+**six selections per folder, 60 total slots per method**. The 5%/10% batch quotas
+sum to 309/620 slots. Uniqueness is within each batch; identical structures may
+recur between batches. A seeded random ranking provides a control.
 
 MEGNet and eSEN evaluated the selected crystals against separate, fixed
 same-model hulls using **58,377 MP2023 reference structures**. Candidate geometries
@@ -48,20 +50,21 @@ not the hull phase bank**: every screening method receives the same proxy label
 for a given candidate. No new graph model was trained in this comparison.
 
 **The models disagree on the primary result.** MEGNet favours kNN-25, with
-90.3% passing versus chemical's 66.1% (+24.2 percentage points; descriptive paired
-chemical-system 95% interval +8.6 to +40.3 points). eSEN favours chemical at 59.7%,
-versus kNN-5 at 31/59 valid labels (52.5%; three unknown) and kNN-25 at 28/59
-(47.5%; three unknown). Even counting those unknowns as passing leaves both
-kNN variants below chemical in this sample, but all pure-kNN eSEN comparison
-intervals include zero.
+85.0% passing versus chemical's 65.0% (+20.0 percentage points; descriptive paired
+batch-bootstrap 95% interval +8.3 to +31.7 points). eSEN favours chemical at 60.0%,
+versus kNN-5 at 30/58 valid labels (51.7%; two unknown) and kNN-25 at 26/57
+(45.6%; three unknown). Counting unknowns as passing still leaves both below
+chemical in this sample. The kNN-25 eSEN batch interval is -23.0 to -4.9 points;
+the kNN-5 interval includes zero. These intervals are exploratory and unadjusted.
 
-Chemical and kNN-5 each yield **27 confirmed both-model passes per 62 slots**;
-kNN-25 yields 26. Union variants yield 19–22. At larger budgets the observed
-leader varies: MEGNet favours kNN-5/10 at 5% and kNN-10 at 10%; eSEN favours
+Chemical and kNN-5 each yield **26 confirmed both-model passes per 60 slots**;
+kNN-25 yields 23. Union variants yield 22–24. At larger budgets the observed
+leader varies: MEGNet favours kNN-5/15 at 5% and kNN-10 at 10%; eSEN favours
 kNN-5 at 5%, while at 10% chemical has the highest valid-label precision and
 kNN-10 the highest confirmed yield per requested slot. **There is no established
 best method across both proxies**, and unknown labels must remain explicit.
-See [the experiment tracker](EXPERIMENT_REPORT.md#completed-megnetesen-screening-experiment--analysis-updated-28-october-2026)
+The earlier 62-slot headline used a different ten-folder ranking and is superseded
+here. See [the experiment tracker](EXPERIMENT_REPORT.md)
 for the protocol, coverage bounds, tests, and full results.
 
 ## The clearest conclusions so far

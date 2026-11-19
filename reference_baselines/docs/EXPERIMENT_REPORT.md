@@ -1,6 +1,95 @@
 # Reference experiments and training readiness
 
-## Completed MEGNet/eSEN screening experiment — analysis updated 28 October 2026
+## Batch-wise reference comparison — corrected 30 October 2026
+
+**The intended primary protocol selects the top percentage separately within
+each batch.** The earlier notebook, slides and headline summary instead used
+the combined ten-folder ranking. Those 62-slot results are retained below as
+a historical comparison and must not be presented as batch-wise results.
+
+The original SOC workflow already selected and evaluated every per-batch cohort.
+This correction reuses verified `scope=batch` report rows; **no new embeddings,
+energy predictions or hull calculations are required**. Original downloaded
+reports and their completion hashes remain intact. Corrected derived outputs
+are in `reference_set_comparison/outputs/comparison_20_29/reports/analysis_batchwise/`.
+
+### Correct selection unit and aggregation
+
+For each folder `b`, rank its eligible candidates, select
+`floor(p * N_b)`, and apply unique refill **within that folder**. Then sum the
+success, valid-label, unknown and requested-slot counts across folders 20–29.
+Precision is `sum(passing) / sum(valid labels)`, not a mean of batch percentages.
+Identical structures may recur between batches; these are within-batch unique
+selection slots, not a guarantee of global structural uniqueness.
+
+| Batch | Eligible candidates | Top-1% slots |
+| --- | ---: | ---: |
+| 20 | 645 | 6 |
+| 21 | 628 | 6 |
+| 22 | 612 | 6 |
+| 23 | 606 | 6 |
+| 24 | 623 | 6 |
+| 25 | 657 | 6 |
+| 26 | 607 | 6 |
+| 27 | 649 | 6 |
+| 28 | 609 | 6 |
+| 29 | 622 | 6 |
+| Total | 6,258 | 60 |
+
+The 5% and 10% batch-wise budgets sum to **309 and 620** slots. Applying the
+percentage after combining all rows would instead give 62/312/625 and would
+select different candidates. The frozen encoder, reconstructed scaler, reference
+rules, squared-distance score, models, fixed phase banks and `<0.1 eV/atom`
+label definition remain as documented below.
+
+### Corrected top-1% results: six slots in each batch
+
+| Method | MEGNet pass/valid | eSEN pass/valid | eSEN unknown | Confirmed both-pass / 60 slots |
+| --- | ---: | ---: | ---: | ---: |
+| Chemical | 39/60 (65.0%) | 36/60 (60.0%) | 0 | 26 (43.3%) |
+| kNN-5 | 50/60 (83.3%) | 30/58 (51.7%) | 2 | 26 (43.3%) |
+| kNN-10 | 50/60 (83.3%) | 28/57 (49.1%) | 3 | 25 (41.7%) |
+| kNN-15 | 49/60 (81.7%) | 27/58 (46.6%) | 2 | 24 (40.0%) |
+| kNN-25 | 51/60 (85.0%) | 26/57 (45.6%) | 3 | 23 (38.3%) |
+| Union-5 | 43/60 (71.7%) | 31/58 (53.4%) | 2 | 24 (40.0%) |
+| Union-10 | 42/60 (70.0%) | 28/58 (48.3%) | 2 | 22 (36.7%) |
+| Union-15 | 42/60 (70.0%) | 27/58 (46.6%) | 2 | 22 (36.7%) |
+| Union-25 | 43/60 (71.7%) | 25/58 (43.1%) | 2 | 22 (36.7%) |
+| Random control | 41/60 (68.3%) | 24/55 (43.6%) | 5 | 18 (30.0%) |
+
+MEGNet kNN-25 has **12 more passing selections / +20.0 percentage points** than
+chemical. A new descriptive paired-**batch** bootstrap (2,000 resamples, seed
+2026) gives **[+8.3,+31.7] pp**. eSEN kNN-25 minus chemical is **−14.4 pp**, with
+the new batch interval **[−23.0,−4.9] pp**; kNN-5 is **−8.3 pp**, interval
+**[−20.2,+7.9] pp**. These intervals resample the ten folders jointly between
+methods. They are unadjusted and do not account for chemistry shared across
+folders. The old chemical-system intervals for the combined ranking cannot be
+reused for these different selections.
+
+On eSEN, counting all unknown kNN-5/25 selections as passing gives at most
+32/60 and 29/60, still below chemical's observed 36/60. At 5% per batch,
+MEGNet kNN-5/15 tie at **255/309 = 82.5%**; eSEN kNN-5 leads observed precision
+at **157/297 = 52.9%**, with confirmed slot yield **157/309 = 50.8%**. At 10%,
+MEGNet kNN-10 gives **490/620 = 79.0%**; eSEN chemical has the highest valid-label
+precision (**265/573 = 46.2%**), while kNN-10 has the highest confirmed slot yield
+(**268/620 = 43.2%**).
+
+**The qualitative conclusion remains proxy-dependent.** kNN improves the MEGNet
+screen, but eSEN does not corroborate that primary gain. Chemical and kNN-5 tie
+at 26 confirmed both-model passes; kNN-25 gives 23. These results remain
+exploratory proxy evidence rather than DFT stability or a new trained graph model.
+
+The reusable analysis now exposes `scope="batch_aggregate"`; the executed
+notebook selects it explicitly. Future report generation makes `batch_aggregate`
+the headline and writes `batch_aggregate_metrics.csv`, while preserving the old
+`pooled` ten-folder scope separately. Regression tests cover per-batch floor
+rounding, count-weighted precision, membership aggregation without reranking,
+consensus denominators, and paired-batch intervals. Approximate pooled medians,
+quantiles and global distinct-chemistry counts are not fabricated from batch
+summaries. The following section preserves the earlier scope and full physical
+protocol for traceability.
+
+## Historical ten-folder comparison — analysis updated 28 October 2026
 
 The SOC run for **eval folders 20–29 inclusive** and the combined report are
 complete. The downloaded report files match all 11 hashes in their cluster

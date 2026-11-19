@@ -302,8 +302,8 @@ Union & Chemical pool plus kNN, deduplicated by reference ID.\\
 \[
 s_R(c)=\frac{1}{|R(c)|}\sum_{r\in R(c)}\lVert h_c-h_r\rVert_2^2
 \]
-\small Rank the \textbf{combined ten-folder pool}. Top \textbf{1\%, 5\%, 10\%}: \textbf{62, 312, 625} unique selections per method, with a seeded random control.
-\source{Hugging Face: liun-online/Crys\_JEPA, exp\_logs/base/mp\_20/eval. These figures retain the combined-ranking results.}
+\small Rank \textbf{each batch separately}. Top \textbf{1\%, 5\%, 10\% per batch}: \textbf{60, 309, 620} total slots per method, with a seeded random control.
+\source{Hugging Face: liun-online/Crys\_JEPA, exp\_logs/base/mp\_20/eval. At 1\%: six selections per batch. Uniqueness within each batch.}
 \end{frame}
 
 \begin{frame}{Proxy stability: energy above a fixed reference hull}
@@ -335,25 +335,25 @@ H_m(x_c)=\min_{\substack{\lambda_j\ge0,\ \sum_j\lambda_j=1\\\sum_j\lambda_j x_j=
 
 \begin{frame}{MEGNet results: kNN-25 leads at the 1\% budget}
 \centering
-% Retain the left bar/count panel; exclude the right confidence-interval panel.
-\includegraphics[viewport=0 0 460 340,clip,height=.64\textheight]{megnet_primary_comparison.png}
+% Standalone count-labelled chart: no confidence-interval panel.
+\includegraphics[height=.64\textheight]{megnet_primary_comparison.png}
 \vspace{-1mm}
 \begin{itemize}\setlength\itemsep{1mm}
-\item \textbf{kNN-25: \textcolor{teal}{56/62 (90.3\%)}} versus chemical \textbf{41/62 (66.1\%)}. \textcolor{teal}{\textbf{15 additional proxy passes.}}
-\item Gain: \textbf{+24.2 percentage points} at the same selection budget.
+\item \textbf{kNN-25: \textcolor{teal}{51/60 (85.0\%)}} versus chemical \textbf{39/60 (65.0\%)}. \textcolor{teal}{\textbf{12 additional proxy passes.}}
+\item Gain: \textbf{+20.0 percentage points} with the same six-slot budget in every batch.
 \end{itemize}
-\source{Combined ranking of batches 20--29, top 1\%: 62 selections. Fixed MEGNet hull distance $<0.1$ eV/atom. All labels available.}
+\source{Top 1\% separately in batches 20--29: six slots each, 60 total. Fixed MEGNet hull distance $<0.1$ eV/atom. All labels available.}
 \end{frame}
 
 \begin{frame}{eSEN results: lower pass rates and a baseline advantage}
 \centering
-\includegraphics[viewport=0 0 460 340,clip,height=.64\textheight]{esen_primary_comparison.png}
+\includegraphics[height=.64\textheight]{esen_primary_comparison.png}
 \vspace{-1mm}
 \begin{itemize}\setlength\itemsep{1mm}
-\item \textbf{Chemical: \textcolor{blue}{37/62 (59.7\%)}}; kNN-5: \textbf{31/59 (52.5\%)}; kNN-25: \textbf{28/59 (47.5\%)}.
-\item All methods have lower pass rates than with MEGNet. Both kNN sets have three unknowns.
+\item \textbf{Chemical: \textcolor{blue}{36/60 (60.0\%)}}; kNN-5: \textbf{30/58 (51.7\%)}; kNN-25: \textbf{26/57 (45.6\%)}.
+\item Lower pass rates than MEGNet for all methods. kNN-5 has two unknown labels; kNN-25 has three.
 \end{itemize}
-\source{Combined ranking, 62 slots. Precision uses valid labels; unknowns remain unknown. Pass rates do not measure model accuracy.}
+\source{Top 1\% per batch, 60 slots total. Precision uses valid labels; unknowns remain explicit. Pass rates do not measure model accuracy.}
 \end{frame}
 
 \begin{frame}{What the current results mean}

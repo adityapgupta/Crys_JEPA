@@ -4,8 +4,8 @@
 
 The staged experiment compares chemical-subsystem references, global kNN
 (`q=5,10,15,25`), and their deduplicated union using the same JEPA mean squared
-distance. It selects the top 1%, 5%, and 10% of eligible candidates within each
-ten-folder group, with per-folder diagnostics and a fixed random control.
+distance. It selects the top 1%, 5%, and 10% of eligible candidates within
+each batch independently, with per-batch quotas and a fixed random control.
 MEGNet and eSEN evaluate the combined selections against separate model-native
 fixed MP2023 phase banks. Generated candidates never enter those hulls.
 
@@ -228,6 +228,16 @@ MEGNet and eSEN use the same plotting/table functions. Change the notebook's
 report directory to analyse another completed run; keep the complete report
 bundle together. Derived figures/tables and analysis provenance are written to
 its `analysis/` child without changing the source report receipt.
+
+The corrected primary analysis explicitly uses `scope="batch_aggregate"` and
+writes to `analysis_batchwise/`. It selects `floor(p * eligible_count)` separately
+in each folder, then sums passing, valid-label and requested-slot counts. Batches
+20–29 give 60 / 309 / 620 total slots at 1% / 5% / 10%. Unique refill is within
+each batch; identical structures can recur between batches. Do not relabel the
+historical `pooled` ten-folder ranking (62 / 312 / 625 slots) as batch-wise, and
+do not average per-batch percentages or medians. Original source reports remain
+unchanged. New report generation also exports `batch_aggregate_metrics.csv` and
+makes that scope its headline; old `pooled` tables remain separately identified.
 
 The analysis distinguishes valid-label precision from success per requested
 slot, with explicit unknown-label bounds. It does not average models into an

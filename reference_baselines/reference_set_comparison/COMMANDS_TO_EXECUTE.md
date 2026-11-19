@@ -61,8 +61,9 @@ For a different range, change `start_batch`, `end_batch`, and `output` together
 in a copied configuration file, then use `--config path/to/new.yml` on **every**
 stage. Alternatively pass `--start-batch 20 --end-batch 29 --output path/to/run`
 on every command. Never reuse an old run directory for different scientific settings.
-Use complete ten-folder groups for the primary comparison; partial groups are
-allowed and their smaller eligible populations are reported.
+The primary percentage is applied separately inside each batch. For every folder,
+select `floor(p * eligible_count)` and then aggregate the counts; partial batch
+ranges are allowed. Historical ten-folder rankings remain a separate comparison.
 
 ## 4. JEPA GPU export, exact index, and selections
 
@@ -212,7 +213,9 @@ New-Item -ItemType Directory -Force -Path $destination | Out-Null
 scp -J atharvak@stujump.comp.nus.edu.sg -r atharvak@xlogin.comp.nus.edu.sg:~/Crys_JEPA/reference_baselines/reference_set_comparison/outputs/comparison_20_29/reports/megnet $destination
 ```
 
-Open `outputs/comparison_20_29/reports/megnet/REPORT.md` or `pooled_metrics.csv`.
+Open `outputs/comparison_20_29/reports/megnet/REPORT.md` or `batch_aggregate_metrics.csv`
+from the updated report stage. Older downloaded reports can be analysed locally
+by aggregating their existing `batch_metrics.csv`; no new inference is needed.
 For the main unique top-1% comparison, filter the CSV to `policy=unique_refill`,
 `fraction=0.01`, and `threshold_eV_per_atom=0.1`. Also inspect coverage and
 requested-slot yield bounds. Once eSEN finishes, run the ordinary `report` stage
@@ -234,8 +237,9 @@ Large model caches and the MP2023 database stay on SOC. The main report is
 
 | File | Purpose |
 |---|---|
-| `turn_metrics.csv` / `pooled_metrics.csv` | Primary top-1% precision and 5%/10% sensitivities |
-| `batch_metrics.csv` | Per-folder diagnostic selections |
+| `batch_aggregate_metrics.csv` | Primary top-1% per-batch selections aggregated by counts; 5%/10% sensitivities |
+| `batch_metrics.csv` | Individual batch selections and label coverage |
+| `turn_metrics.csv` / `pooled_metrics.csv` | Historical ten-folder ranking; a different selection, not the batch-wise primary result |
 | `paired_comparisons.csv` | Difference versus chemical baseline, uncertainty and exclusive-cohort precision |
 | `overlap.csv` / `selection_membership.csv` | Selection overlap and candidate-level disagreement |
 | `proxy_consensus.csv` | Both/either/neither model pass rates and label coverage |
