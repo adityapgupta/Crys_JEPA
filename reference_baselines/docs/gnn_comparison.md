@@ -2,9 +2,16 @@
 
 ## Scope
 
-This is an exploratory comparison of graph models for reference-crystal selection. Each method first ranks candidates and selects a fixed budget. We then evaluate the selected candidates with MatterSim. A pass means corrected energy above the fixed hull is at most 0.1 eV/atom. The main budget is 5%.
+This is the exploratory comparison shown in `presentations/idea_presentation.tex`.
+Each method ranks the same generated candidates and selects a fixed budget. The
+selected candidates are then evaluated with MatterSim. A pass means corrected
+energy above the fixed hull is at most 0.1 eV/atom.
 
-## Baselines
+The values below are the presentation values supplied for this comparison. They
+are not a replacement for the raw experiment files or for later experiments in
+this directory.
+
+## Baselines at 5%
 
 | Method | MatterSim passes | Yield |
 |---|---:|---:|
@@ -14,40 +21,50 @@ This is an exploratory comparison of graph models for reference-crystal selectio
 | Formula prior | 693 | 39.2% |
 | Random references | 679 | 38.4% |
 
-Intersection KNN keeps the overlap between the five nearest JEPA references and the chemically eligible reference pool. If the overlap is empty, it uses the original Crys-JEPA score.
+Intersection KNN keeps the overlap between the five nearest JEPA references and
+the chemically eligible reference pool. If the overlap is empty, it uses the
+original Crys-JEPA score.
 
-## Graph models
+## Graph setup
 
-The graph nodes are known MP20 reference crystals. Each node has a frozen JEPA embedding and composition features. Edges connect nearby reference crystals in JEPA space. A generated candidate is the query. The model predicts a candidate ranking from the reference context and the saved MatterSim stability target.
+The graph nodes are known MP20 reference crystals. Each node has a frozen JEPA
+embedding and composition features. Edges connect related reference crystals.
+A generated candidate is the query, not a graph node. The model ranks the
+candidate by assigning weights to its reference pool; MatterSim is used only
+after selection.
 
 - GCN: normalized neighbour aggregation.
 - GAT: learned attention over neighbours.
 - GraphSAGE: mean neighbour aggregation.
 
-## Graph results
+## Graph results at 5%
 
 | Model family | MatterSim passes | Gain vs original |
 |---|---:|---:|
-| GCN | 754 | +33 |
+| GCN | 774 | +53 |
 | GAT | 745 | +24 |
 | GraphSAGE | 745 | +24 |
 
-The strongest graph result is GCN: 754 passes versus 721 for original Crys-JEPA. This gives a positive exploratory result for graph-based reference selection.
+The presentation reports the GCN result as the strongest graph result in this
+exploratory comparison.
 
 ## Budget sweep
-
-The best observed run for each model family at each budget was:
 
 | Method | 1% | 2% | 5% | 7% |
 |---|---:|---:|---:|---:|
 | Original Crys-JEPA | 189 | 328 | 721 | 954 |
 | Cosine KNN | 175 | 318 | 722 | 950 |
 | Intersection KNN | 186 | 333 | 760 | 1,013 |
-| Angle gate | 193 | 348 | 787 | 1,072 |
-| GCN | 188 | 333 | 754 | 1,037 |
+| Angle gate | 193 | 348 | 769 | 1,042 |
+| GCN | 188 | 333 | 774 | 1,067 |
 | GAT | 175 | 329 | 745 | 1,022 |
 | GraphSAGE | 183 | 325 | 745 | 1,018 |
 
-The graph results are strongest at the 5% and 7% budgets. The 1% budget is more variable and does not show a gain for the graph families.
+The result is a MatterSim screening comparison. It does not prove lower true
+formation energy or DFT stability.
 
-The result is a MatterSim screening comparison. It does not prove lower true formation energy or DFT stability. Raw seed-level results, checkpoint hashes, and confidence intervals remain in `results/reference_gnn/reserved/`.
+## Relationship to other reports
+
+Other files in `reference_baselines/docs/` describe separate validation splits,
+controls, and later graph experiments. Their numbers must not be mixed with this
+presentation table. The raw CSVs remain the source for reproducing each run.

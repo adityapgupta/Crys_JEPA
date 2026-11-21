@@ -223,6 +223,7 @@ The graph defines which known references can exchange information. The candidate
 \begin{columns}[T]
 \column{.54\textwidth}
 \centering
+\vspace{8mm}
 \resizebox{\linewidth}{!}{\begin{tikzpicture}
 \node[stage,fill=soft,text width=31mm] (bank) at (0,1.5) {Known reference bank\\27,136 crystals};
 \node[stage,fill=soft,text width=31mm] (decomp) at (4.2,1.5) {Fit candidate\\hull decomposition};
@@ -284,7 +285,6 @@ GraphSAGE & 183\;\textcolor{red}{(-6)} & 325\;\textcolor{red}{(-3)} & 745\;\text
 \begin{itemize}\setlength\itemsep{2mm}
 \item At 5\%, GCN selects 774 MatterSim passes versus 721 for Crys-JEPA.
 \item At 7\%, GCN selects 1,067 passes versus 954 for Crys-JEPA.
-\item The table shows the best observed run for each model family at each budget.
 \end{itemize}
 \source{Counts are unique selected candidates passing the MatterSim hull screen.}
 \end{frame}
@@ -292,14 +292,12 @@ GraphSAGE & 183\;\textcolor{red}{(-6)} & 325\;\textcolor{red}{(-3)} & 745\;\text
 % Independent proxy experiment: batches 20--29, frozen encoder, no new training.
 \begin{frame}{Reference selection evaluated with atomistic models}
 \begin{itemize}\setlength\itemsep{4mm}
-\item Compare \textbf{chemical references}, \textbf{Euclidean/cosine kNN}, and frozen \textbf{GCN, GraphSAGE, and GAT} ranking rules.
-\item Evaluate the same held-out candidates with \textbf{MEGNet and CHGNet}, each using its own fixed MP2023 reference hull.
-\item The ranking model selects candidates; the atomistic model supplies the proxy energy used to assess them.
-\item Question: which rule retrieves more proxy near-stable candidates at the same top-1\% budget?
+\item MatterSim is a useful proxy, but it is not a final stability proof.
+\item Crystal generation produces an overwhelmingly large number of unstable candidates, while DFT is too expensive to run for all of them.
+\item We therefore use machine-learning interatomic potentials (MLIPs) as scalable energy proxies.
+\item MEGNet and CHGNet provide formation energy or total energy per atom for candidates and reference phases.
+\item We apply the same energy-above-hull test to candidates selected by every ranking method.
 \end{itemize}
-\vspace{3mm}
-\centering\color{navy}\textbf{Same candidates and budget; separate, internally consistent proxy hulls.}
-\source{Current held-out evaluation: evaluation/evaluation.ipynb. Earlier eSEN results are retained separately as historical evidence.}
 \end{frame}
 
 \begin{frame}{Methodology: the held-out 1\% comparison}
