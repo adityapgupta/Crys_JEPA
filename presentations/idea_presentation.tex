@@ -194,21 +194,52 @@ Random references & 679 & 38.4\% & \textcolor{red}{-42\;(-2.4\,pp)} \\
 \column{.31\textwidth}
 \textbf{Edges}
 \begin{itemize}\setlength\itemsep{2mm}
-\item Connect each reference to its ten nearest references by cosine distance.
-\item Add the reverse edge so the graph is symmetric.
-\item Store cosine distance, raw squared distance, and chemical eligibility.
+\item Main graph: connect references that co-occur in a fit-side hull decomposition.
+\item Weight each edge by the pair's co-occurrence count.
 \end{itemize}
 \column{.31\textwidth}
 \textbf{Prediction}
 \begin{itemize}\setlength\itemsep{2mm}
-\item A generated candidate enters as a query, never as a graph node.
+\item A generated candidate enters as a query, not as a graph node.
 \item Message passing updates each known reference using its neighbours.
-\item A candidate-conditioned readout scores the reference set and predicts a MatterSim pass.
+\item A candidate-conditioned readout scores reference usefulness; MatterSim evaluates the selected candidates later.
 \end{itemize}
 \end{columns}
 \vspace{3mm}
 \centering\small
-The KNN graph defines who can exchange information. The edge features and candidate-conditioned readout decide how that information affects the final score.
+The graph defines which known references can exchange information. The candidate then receives one final ranking score.
+\end{frame}
+
+\begin{frame}{How the reference graph is constructed}
+\begin{columns}[T]
+\column{.54\textwidth}
+\centering
+\resizebox{\linewidth}{!}{\begin{tikzpicture}
+\node[stage,fill=soft,text width=31mm] (bank) at (0,1.5) {Known reference bank\\27,136 crystals};
+\node[stage,fill=soft,text width=31mm] (decomp) at (4.2,1.5) {Fit candidate\\hull decomposition};
+\node[stage,fill=soft,text width=31mm] (edge) at (8.4,1.5) {Add reference--reference\\co-occurrence edges};
+\draw[arr] (bank)--(decomp);
+\draw[arr] (decomp)--(edge);
+\node[stage,fill=soft,text width=31mm] (query) at (0,-1.0) {New candidate\\JEPA + composition};
+\node[stage,fill=soft,text width=31mm] (pool) at (4.2,-1.0) {Candidate pool\\chemical subset + 5 JEPA kNN};
+\node[stage,fill=soft,text width=31mm] (gnn) at (8.4,-1.0) {GCN message passing\\inside the pool};
+\draw[arr] (query)--(pool);
+\draw[arr] (pool)--(gnn);
+\draw[arr] (edge)--(gnn);
+\end{tikzpicture}}
+\column{.42\textwidth}
+\small
+\begin{itemize}\setlength\itemsep{3mm}
+\item We define one known reference crystal as a node.
+\item An edge joins two references that appear together in any candidate's hull decomposition.
+\item The edge weight is a function of how often the pair appears together.
+\item A generated candidate is used as a query node.
+\item At scoring time, the GCN uses only the edges between that candidate's reference pool.
+\end{itemize}
+\end{columns}
+\vspace{3mm}
+\centering\small
+The graph is built from known references. The candidate selects the local pool and conditions the final reference weights.
 \end{frame}
 
 \begin{frame}{Models compared}
