@@ -119,71 +119,30 @@ mp-127 & Na & 0.0123 & 229\\
 \end{columns}
 \end{frame}
 
-\begin{frame}{Analysis on crystal symmetry}
-Crys-JEPA embeddings of the 27{,}136 MP-20 crystals, compared against their
-space-group labels.
-\vspace{2mm}
-\begin{itemize}\setlength\itemsep{4mm}
-\item \textbf{Communities align with symmetry.} Space-group AMI $=$ \key{0.148}
-      ($0 =$ chance) --- higher than the chemical-system AMI of $0.067$; same
-      under Euclidean and cosine graphs.
-\item \textbf{Directly decodable.} A linear probe predicts space group at
-      \key{34.0\%} accuracy, vs.\ $14.3\%$ for guessing the most common group
-      --- well above chance for a many-class label.
-\item \textbf{Most groups concentrate.} \key{61 of 73} space groups cluster into
-      a few communities far more than chance; rock-salt (SG 225) peaks at
-      \key{4.15$\times$}, then SG 216 ($3.19\times$) and SG 187 ($2.90\times$).
-\end{itemize}
-\vspace{4mm}
-\textcolor{navy}{\textbf{Inference:}} the embeddings carry a clear, non-random
-symmetry signal, consistent across all three tests.
-\end{frame}
-
-\begin{frame}{ Comparing the candidate selection from these methods}
-\begin{columns}[T]
-\column{.30\textwidth}
-\textbf{Shared set}
-\small Candidates selected by both the original Crys-JEPA rule and the new rule. These candidates do not explain the difference.
-\column{.30\textwidth}
-\textbf{Added set}
-\small Candidates selected by the new rule but missed by the original rule. These are the extra candidates we study.
-\column{.30\textwidth}
-\textbf{Removed set}
-\small Candidates selected by the original rule but missed by the new rule. These are the candidates traded away.
-\end{columns}
-\vspace{7mm}
-\centering
-\begin{tabular}{lrr}
-\toprule
-Group & Count & MatterSim pass rate \\
-\midrule
-Shared & 455 & 37\% \\
-Added & 1,394 & 44\% \\
-Removed & 1,394 & 34\% \\
-\bottomrule
-\end{tabular}
-\end{frame}
-
-\begin{frame}{Observed selection change}
-\begin{columns}[T]
-\column{.62\textwidth}
-\centering
-\includegraphics[height=.19\textheight,viewport=0 288 396 576,clip]{selection_explanation.png}\\[-1mm]
-\includegraphics[height=.19\textheight,viewport=396 288 792 576,clip]{selection_explanation.png}\\[-1mm]
-\includegraphics[height=.19\textheight,viewport=0 0 396 288,clip]{selection_explanation.png}
-\column{.35\textwidth}
-\scriptsize
-\textbf{Panel A: selected-set change.} The new rule adds 613 candidates and removes 475 relative to the shared set.\\[2mm]
-\textbf{Panel B: nearest-reference angle.} Added candidates have a close known reference, often inside the 1 degree gate.\\[2mm]
-\textbf{Panel C: local versus pool score.} A close neighbour does not always give a low mean distance to the full chemical pool. The plot shows why a local-neighbour rule can select different candidates from the original mean-distance rule.
-\end{columns}
-\end{frame}
-
 \begin{frame}{Experiments}
 \centering
 \vfill
 {\Huge\color{navy}Experiments}
 \vfill
+\end{frame}
+
+\begin{frame}{Observation selection change - K Nearest Neighbors}
+\begin{columns}[T]
+\column{.52\textwidth}
+\centering
+\includegraphics[height=.42\textheight,viewport=396 288 792 576,clip]{selection_explanation.png}\\[1.5mm]
+{\scriptsize\textbf{Nearest known-reference angle.} Added candidates have a close known
+reference, usually inside the $1^\circ$ gate; removed candidates sit farther out.}\\[3mm]
+{\scriptsize\textbf{The original reference crystals are not close to the candidate in
+the embedding space.} Even as $k$ grows and more of the reference bank is covered (top
+right), the retrieved references stay far from the candidate.}
+\column{.46\textwidth}
+\centering
+\includegraphics[height=.37\textheight]{coverage_reference_crystals.png}\\[0.5mm]
+\includegraphics[height=.37\textheight]{mean_formation_energy_gap.png}\\[1mm]
+{\scriptsize\textcolor{blue}{$\blacksquare$} Directed top-$k$ \quad
+\textcolor{ochre}{$\blacksquare$} Symmetric union}
+\end{columns}
 \end{frame}
 
 \begin{frame}{Baseline methods}
