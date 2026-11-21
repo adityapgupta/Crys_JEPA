@@ -311,28 +311,21 @@ GraphSAGE & 183\;\textcolor{red}{(-6)} & 325\;\textcolor{red}{(-3)} & 745\;\text
 \end{frame}
 
 \begin{frame}{What the current results mean}
-\begin{itemize}\setlength\itemsep{3mm}
+\begin{itemize}\setlength\itemsep{5mm}
 \item \textbf{MEGNet:} the best observed GAT run reaches \textbf{81.3\%}, versus \textbf{73.9\%} for chemical references.
 \item \textbf{CHGNet:} chemical references reach \textbf{85.6\%} and lead both the best kNN and the best observed GNN runs.
-\item \textbf{No method wins under both proxies.} The observed ranking improvement depends on which atomistic model supplies the energies.
-\item Best-run reporting does not establish consistency across random seeds or a statistically reliable improvement. The notebook retains seed-level and uncertainty analyses.
-\item Earlier same-chemistry and same-formula controls did not establish improved ordering of polymorphs by stability.
+\item \key{No consistent proxy.} No method wins under both proxies --- the observed
+ranking improvement depends entirely on which atomistic model supplies the energies.
 \end{itemize}
-\vspace{2mm}
-\textcolor{navy}{\textbf{Earlier edge-feature ablations:}}
-adding similarity, space-group, and electronegativity attributes did not improve MatterSim screening yield over the plain-weight baseline.
+\vspace{6mm}
+\centering\large\color{navy}\textbf{No consistent proxy signal: the ``best'' ranking rule flips between MEGNet and CHGNet.}
 \end{frame}
 
-\begin{frame}{Current evidence and limits}
-\begin{itemize}\setlength\itemsep{4mm}
-\item The ranking bank contains known MP20 crystals; generated candidates never enter the fixed MP2023 evaluation hulls.
-\item MEGNet and CHGNet disagree on which ranking method performs best. Neither proxy supplies DFT confirmation.
-\item CHGNet has \textbf{107 failed phase predictions}, leaving \textbf{819 unknown candidate hull labels} across the evaluated union. Unknowns remain explicit.
-\item The figures show \textbf{best observed GNN runs and kNN settings}, selected using evaluation outcomes; they are descriptive results rather than independent model-selection evidence.
-\item Next: inspect success/reject cases and perform independent checks of stability and selection bias.
+\begin{frame}{Future work}
+\begin{itemize}\setlength\itemsep{6mm}
+\item Search for a better evaluation technique.
+\item Better training objective.
 \end{itemize}
-\vspace{3mm}
-\centering\large\color{navy}Reference quality is judged by downstream screening yield.
 \end{frame}
 
 \end{document}
