@@ -59,12 +59,12 @@ def paired_interval(original, alternative, repeats, seed):
     return tuple(np.quantile(differences, [.025, .975])) if differences else (None, None)
 
 
-def pooled_requests(requests, selections):
-    grouped = requests[requests.scope.eq("turn")].groupby(["method", "policy", "fraction"], as_index=False)
+def pooled_requests(requests, selections, source_scope="turn", target_scope="pooled"):
+    grouped = requests[requests.scope.eq(source_scope)].groupby(["method", "policy", "fraction"], as_index=False)
     pooled = grouped[["population", "budget", "selected_count", "scoreable_count", "raw_unique_without_refill", "raw_selected_count"]].sum()
-    pooled["scope"], pooled["group"] = "pooled", -1
-    extra = selections[selections.scope.eq("turn")].copy()
-    extra["scope"], extra["group"] = "pooled", -1
+    pooled["scope"], pooled["group"] = target_scope, -1
+    extra = selections[selections.scope.eq(source_scope)].copy()
+    extra["scope"], extra["group"] = target_scope, -1
     return pd.concat([requests, pooled], ignore_index=True), pd.concat([selections, extra], ignore_index=True)
 
 
@@ -84,6 +84,7 @@ def generate_reports(config, model=None):
     requests = pd.read_csv(output / "selection_requests.csv")
     selections = pd.read_csv(output / "selections.csv")
     requests, selections = pooled_requests(requests, selections)
+    requests, selections = pooled_requests(requests, selections, "batch", "batch_aggregate")
     ids = {key: set(group.candidate_row) for key, group in selections.groupby(GROUP_KEYS)}
     labels = {name: pd.read_csv(output / f"{name}_labels.csv", keep_default_na=False).set_index("candidate_row", verify_integrity=True)
               for name in model_names}
@@ -143,22 +144,22 @@ def generate_reports(config, model=None):
     if consensus:
         products["proxy_consensus.csv"] = pd.DataFrame(consensus)
     metric_table = products["metrics.csv"]
-    for scope in ("batch", "turn", "pooled"):
+    for scope in ("batch", "batch_aggregate", "turn", "pooled"):
         products[f"{scope}_metrics.csv"] = metric_table[metric_table.scope.eq(scope)]
     for filename, table in products.items():
         table.to_csv(report_dir / filename, index=False)
-    primary = metric_table[metric_table.scope.eq("pooled") & metric_table.fraction.eq(.01)
+    primary = metric_table[metric_table.scope.eq("batch_aggregate") & metric_table.fraction.eq(.01)
                            & metric_table.threshold_eV_per_atom.eq(.1)]
     # Avoid requiring tabulate for a portable Markdown report.
     columns = ["method", "policy", "proxy", "budget", "stable_count", "evaluated_count", "precision_evaluated"]
-    lines = [f"# Reference-selection experiment ({', '.join(model_names)})", "", "Primary: per-turn top 1%; fixed model-specific MP2023 phase banks.", "",
+    lines = [f"# Reference-selection experiment ({', '.join(model_names)})", "", "Primary: top 1% separately per batch, then aggregate counts; fixed model-specific MP2023 phase banks.", "",
              "| " + " | ".join(columns) + " |", "| " + " | ".join(["---"]*len(columns)) + " |"]
     lines.extend("| " + " | ".join(str(row[c]) for c in columns) + " |" for row in primary.to_dict("records"))
     lines += ["", "## Interpretation", "", "- Precision uses valid proxy labels; coverage and requested-slot yield bounds are reported separately.",
               "- A missing label is unknown, not stable. Unfilled selection slots cannot count as discoveries.",
               "- Thresholds are <0.1 and <0.05 eV/atom; the on/below-hull diagnostic uses <=0.",
-              "- Pooled results aggregate selections made within ten-folder groups; per-folder selections are diagnostic.",
-              "- Unique refill is performed within each selection group; pooled sets can still contain duplicates across groups.",
+              "- batch_aggregate is primary: sum per-batch selections; pooled retains the historical ten-folder selection as a separate comparison.",
+              "- Unique refill is within each batch; identical structures can still appear in different batches.",
               "- The phase bank contains only fixed reference phases, never selected candidates.",
               "- Proxies share historical materials data; agreement is not independent DFT confirmation.",
               "- No population recall, PR curves, or full-population score correlations are claimed from selected-union labels.",
@@ -174,6 +175,7 @@ def generate_reports(config, model=None):
         "config": read_json(output / "run.json"),
         "models": {name: read_json(output / f"{name}_model.json") for name in model_names},
         "report_proxies": model_names, "cross_proxy_consensus_available": len(model_names) > 1,
+        "primary_scope": "batch_aggregate", "selection_scope": "batch",
         "phases": read_json(output / "phases.json"), "selection": read_json(output / "select.json"),
         "interval": "paired chemical-system bootstrap, complete labels; descriptive",
         "threshold_eV_per_atom": .1, "rule": "strictly less than", "sampled_label_scope": "selected union plus random controls"})

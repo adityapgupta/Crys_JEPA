@@ -11,6 +11,7 @@ import pandas as pd
 
 from reference_baselines.core.io import sha256
 from .common import read_json, write_json
+from .aggregation import aggregate_batch_metrics, aggregate_batch_consensus, paired_batch_interval
 
 
 @dataclass
@@ -46,12 +47,14 @@ def load_report(directory):
 
 def metric_rows(bundle, proxy=None, scope="pooled", policy="unique_refill", threshold=.1, fraction=None):
     table = bundle.tables["metrics"]
-    keep = table.scope.eq(scope) & table.policy.eq(policy) & np.isclose(table.threshold_eV_per_atom, threshold)
+    source_scope = "batch" if scope == "batch_aggregate" else scope
+    keep = table.scope.eq(source_scope) & table.policy.eq(policy) & np.isclose(table.threshold_eV_per_atom, threshold)
     if proxy is not None:
         keep &= table.proxy.eq(proxy)
     if fraction is not None:
         keep &= np.isclose(table.fraction, fraction)
-    return table.loc[keep].copy()
+    rows = table.loc[keep].copy()
+    return aggregate_batch_metrics(rows) if scope == "batch_aggregate" else rows
 
 
 def audit_report(bundle):
@@ -127,20 +130,33 @@ def audit_report(bundle):
         minimum_selected=("selected_count", "min"))
 
 
-def primary_table(bundle, proxy, fraction=.01):
-    primary = metric_rows(bundle, proxy, fraction=fraction)
-    ci = bundle.tables["paired_comparisons"]
-    ci = ci[ci.scope.eq("pooled") & ci.policy.eq("unique_refill") & ci.proxy.eq(proxy) & np.isclose(ci.fraction, fraction)]
-    table = primary.merge(ci[["method", "paired_chemical_system_ci_low", "paired_chemical_system_ci_high"]],
-                          on="method", how="left", validate="one_to_one")
+def primary_table(bundle, proxy, fraction=.01, scope="pooled"):
+    primary = metric_rows(bundle, proxy, fraction=fraction, scope=scope)
+    if scope == "batch_aggregate":
+        batches = metric_rows(bundle, proxy, scope="batch", fraction=fraction)
+        baseline = batches[batches.method.eq("chemical")]
+        table = primary.copy()
+        intervals = [paired_batch_interval(baseline, batches[batches.method.eq(method)])
+                     if method != "chemical" else (np.nan, np.nan) for method in table.method]
+        table["comparison_ci_low"] = [ci[0] for ci in intervals]
+        table["comparison_ci_high"] = [ci[1] for ci in intervals]
+        table["ci_unit"] = "paired batch bootstrap"
+    else:
+        ci = bundle.tables["paired_comparisons"]
+        ci = ci[ci.scope.eq(scope) & ci.policy.eq("unique_refill") & ci.proxy.eq(proxy) & np.isclose(ci.fraction, fraction)]
+        table = primary.merge(ci[["method", "paired_chemical_system_ci_low", "paired_chemical_system_ci_high"]],
+                              on="method", how="left", validate="one_to_one")
+        table["comparison_ci_low"] = table.paired_chemical_system_ci_low
+        table["comparison_ci_high"] = table.paired_chemical_system_ci_high
+        table["ci_unit"] = "paired chemical-system bootstrap"
     baseline = table.set_index("method").loc["chemical", "precision_evaluated"]
     table["gain_vs_chemical_pp"] = 100 * (table.precision_evaluated - baseline)
     return table.sort_values(["precision_evaluated", "method"], ascending=[False, True]).reset_index(drop=True)
 
 
-def budget_winners(bundle):
+def budget_winners(bundle, scope="pooled"):
     rows = []
-    for (proxy, fraction), table in metric_rows(bundle).groupby(["proxy", "fraction"], sort=True):
+    for (proxy, fraction), table in metric_rows(bundle, scope=scope).groupby(["proxy", "fraction"], sort=True):
         for metric in ("precision_evaluated", "stable_yield_lower_bound"):
             best = table[np.isclose(table[metric], table[metric].max())]
             rows.append({"proxy": proxy, "fraction": fraction, "criterion": metric,
@@ -149,13 +165,43 @@ def budget_winners(bundle):
     return pd.DataFrame(rows)
 
 
-def consensus_table(bundle, fraction=.01):
+def consensus_table(bundle, fraction=.01, scope="pooled"):
     c = bundle.tables["proxy_consensus"]
-    c = c[c.scope.eq("pooled") & c.policy.eq("unique_refill") & np.isclose(c.fraction, fraction)].copy()
+    source_scope = "batch" if scope == "batch_aggregate" else scope
+    c = c[c.scope.eq(source_scope) & c.policy.eq("unique_refill") & np.isclose(c.fraction, fraction)].copy()
+    if scope == "batch_aggregate":
+        c = aggregate_batch_consensus(c)
     c["both_pass_yield_lower"] = c.both_pass / c.budget
     c["both_pass_yield_upper"] = (c.both_pass + c.unknown_either) / c.budget
     c["both_pass_precision_common"] = c.both_pass / c.both_evaluated.replace(0, np.nan)
     return c.sort_values(["both_pass_yield_lower", "method"], ascending=[False, True])
+
+
+def overlap_table(bundle, fraction=.01, scope="pooled"):
+    table = bundle.tables["overlap"]
+    source = "batch" if scope == "batch_aggregate" else scope
+    rows = table[table.scope.eq(source) & table.policy.eq("unique_refill") & np.isclose(table.fraction, fraction)].copy()
+    if scope == "batch_aggregate":
+        rows = rows.groupby("method", as_index=False)[["shared", "baseline_only", "alternative_only"]].sum()
+        rows["selection_jaccard"] = rows.shared / (rows.shared + rows.baseline_only + rows.alternative_only).replace(0, np.nan)
+        rows["baseline_selected_alternative_not_percent"] = 100*rows.baseline_only / (rows.shared + rows.baseline_only).replace(0, np.nan)
+        rows["alternative_selected_baseline_not_percent"] = 100*rows.alternative_only / (rows.shared + rows.alternative_only).replace(0, np.nan)
+    return rows
+
+
+def cohort_table(bundle, proxy, fraction=.01, scope="pooled"):
+    table = bundle.tables["paired_comparisons"]
+    source = "batch" if scope == "batch_aggregate" else scope
+    rows = table[table.scope.eq(source) & table.policy.eq("unique_refill") & table.proxy.eq(proxy)
+                 & np.isclose(table.fraction, fraction)].copy()
+    if scope == "batch_aggregate":
+        columns = [f"{cohort}_{field}" for cohort in ("shared", "baseline_only", "alternative_only")
+                   for field in ("selected_count", "stable_count", "unknown_count")]
+        rows = rows.groupby("method", as_index=False)[columns].sum()
+        for cohort in ("shared", "baseline_only", "alternative_only"):
+            rows[f"{cohort}_precision_evaluated"] = rows[f"{cohort}_stable_count"] / (
+                rows[f"{cohort}_selected_count"] - rows[f"{cohort}_unknown_count"]).replace(0, np.nan)
+    return rows
 
 
 def family_color(method):
@@ -171,36 +217,45 @@ def save_figure(fig, directory, name):
     return fig
 
 
-def plot_primary(bundle, proxy, directory):
+def plot_primary(bundle, proxy, directory, scope="pooled", counts_only=False):
     import matplotlib.pyplot as plt
-    table = primary_table(bundle, proxy)
-    fig, (ax, ci_ax) = plt.subplots(1, 2, figsize=(13, 5.2))
+    table = primary_table(bundle, proxy, scope=scope)
+    batchwise = scope == "batch_aggregate"
+    if counts_only:
+        fig, ax = plt.subplots(figsize=(8.5, 5.5))
+        ci_ax = None
+    else:
+        fig, (ax, ci_ax) = plt.subplots(1, 2, figsize=(13, 5.2))
     y = np.arange(len(table))
     ax.barh(y, 100*table.precision_evaluated, color=[family_color(m) for m in table.method])
     for i, row in enumerate(table.itertuples()):
         ax.text(100*row.precision_evaluated+1, i,
                 f"{row.stable_count}/{row.evaluated_count}" + (f" (+{row.unknown_count} unknown)" if row.unknown_count else ""), va="center", fontsize=8)
     ax.set(yticks=y, yticklabels=table.method, xlim=(0, 108), xticks=[0, 20, 40, 60, 80, 100],
-           xlabel="Precision among valid labels (%)", title=f"{proxy.upper()}: top 1%, unique refill")
+           xlabel="Precision among valid labels (%)", title=f"{proxy.upper()}: top 1% {'per batch' if batchwise else 'per ten-folder group'}, unique refill")
     ax.invert_yaxis()
-    compared = table[table.method.ne("chemical")]
-    for i, row in enumerate(compared.itertuples()):
-        ci_ax.hlines(i, 100*row.paired_chemical_system_ci_low, 100*row.paired_chemical_system_ci_high, color="#737b85", lw=2)
-        ci_ax.scatter(row.gain_vs_chemical_pp, i, color=family_color(row.method), zorder=3)
-    ci_ax.axvline(0, color="#40464d", ls="--", lw=1)
-    ci_ax.set(yticks=np.arange(len(compared)), yticklabels=compared.method,
-              xlabel="Precision difference vs chemical (percentage points)", title="Descriptive paired chemical-system 95% intervals")
-    ci_ax.invert_yaxis()
-    for axis in (ax, ci_ax):
+    if ci_ax is not None:
+        compared = table[table.method.ne("chemical")]
+        for i, row in enumerate(compared.itertuples()):
+            ci_ax.hlines(i, 100*row.comparison_ci_low, 100*row.comparison_ci_high, color="#737b85", lw=2)
+            ci_ax.scatter(row.gain_vs_chemical_pp, i, color=family_color(row.method), zorder=3)
+        ci_ax.axvline(0, color="#40464d", ls="--", lw=1)
+        ci_ax.set(yticks=np.arange(len(compared)), yticklabels=compared.method,
+                  xlabel="Precision difference vs chemical (percentage points)",
+                  title="Descriptive paired " + ("batch" if batchwise else "chemical-system") + " 95% intervals")
+        ci_ax.invert_yaxis()
+    for axis in ([ax] if ci_ax is None else [ax, ci_ax]):
         axis.spines[["top", "right"]].set_visible(False)
-    fig.suptitle("Fixed proxy hull distance <0.1 eV/atom; intervals use valid labels, not unknown-label bounds")
-    return save_figure(fig, directory, f"{proxy}_primary_comparison.png")
+    fig.suptitle((f"Select separately per batch; {int(table.iloc[0].budget)} slots total\n" if batchwise else "")
+                 + "Fixed proxy hull distance <0.1 eV/atom", fontsize=11)
+    filename = f"{proxy}_primary_counts.png" if counts_only else f"{proxy}_primary_comparison.png"
+    return save_figure(fig, directory, filename)
 
 
-def plot_budgets(bundle, proxy, directory):
+def plot_budgets(bundle, proxy, directory, scope="pooled"):
     import matplotlib.pyplot as plt
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.8))
-    table = metric_rows(bundle, proxy)
+    table = metric_rows(bundle, proxy, scope=scope)
     for method, group in table.groupby("method", sort=True):
         group = group.sort_values("fraction")
         for ax, metric in zip(axes, ("precision_evaluated", "stable_yield_lower_bound")):
@@ -212,7 +267,7 @@ def plot_budgets(bundle, proxy, directory):
         ax.set(xlabel="Selected fraction (%)", ylabel="Percent", title=title, xticks=[1, 5, 10], ylim=(0, 100))
         ax.spines[["top", "right"]].set_visible(False)
     axes[1].legend(ncol=2, fontsize=8, frameon=False)
-    fig.suptitle(f"{proxy.upper()}: budget sensitivity; shading treats unknown labels as failures/successes")
+    fig.suptitle(f"{proxy.upper()}: {'batch-wise' if scope == 'batch_aggregate' else 'ten-folder'} budgets; shading bounds unknown labels")
     return save_figure(fig, directory, f"{proxy}_budget_sensitivity.png")
 
 
@@ -229,17 +284,17 @@ def plot_batches(bundle, proxy, directory):
         for x, value in enumerate(values):
             ax.text(x, y, f"{value:.0f}", ha="center", va="center", color="white" if value >= 70 else "black", fontsize=8)
     fig.colorbar(im, ax=ax, label="Proxy-stable / requested slots (%)")
-    fig.suptitle(f"{proxy.upper()}: per-folder top-1% diagnostics; unknown labels contribute no confirmed successes")
+    fig.suptitle(f"{proxy.upper()}: top 1% selected separately per batch; unknown labels add no confirmed successes")
     return save_figure(fig, directory, f"{proxy}_per_batch_diagnostics.png")
 
 
-def plot_overall(bundle, directory):
+def plot_overall(bundle, directory, scope="pooled"):
     import matplotlib.pyplot as plt
-    consensus = consensus_table(bundle).set_index("method").sort_index()
+    consensus = consensus_table(bundle, scope=scope).set_index("method").sort_index()
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     y = np.arange(len(consensus))
     for offset, proxy, color in ((-.16, "megnet", "#2463a6"), (.16, "esen", "#b7464e")):
-        t = primary_table(bundle, proxy).set_index("method").reindex(consensus.index)
+        t = primary_table(bundle, proxy, scope=scope).set_index("method").reindex(consensus.index)
         axes[0].barh(y+offset, 100*t.stable_yield_lower_bound, height=.29, color=color, label=proxy.upper())
         axes[0].hlines(y+offset, 100*t.stable_yield_lower_bound, 100*t.stable_yield_upper_bound, color=color, lw=3)
     axes[0].set(xlabel="Proxy-stable / requested slots (%)", xlim=(0, 100), title="Same selections, different proxy judgements")
@@ -257,22 +312,34 @@ def plot_overall(bundle, directory):
         ax.set(yticks=y, yticklabels=consensus.index)
         ax.invert_yaxis()
         ax.spines[["top", "right"]].set_visible(False)
-    fig.suptitle("Top 1%, unique refill, fixed-hull distance <0.1 eV/atom; line segments are unknown-label bounds")
+    fig.suptitle("Top 1% " + ("separately per batch" if scope == "batch_aggregate" else "per ten-folder group")
+                 + "; fixed-hull distance <0.1 eV/atom; line segments bound unknown labels")
     return save_figure(fig, directory, "overall_proxy_comparison.png")
 
 
-def export_analysis(bundle, directory):
+def export_analysis(bundle, directory, scope="pooled"):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    products = {"coverage_audit.csv": audit_report(bundle).reset_index(), "budget_winners.csv": budget_winners(bundle)}
+    source_audit = audit_report(bundle).reset_index()
+    selected = metric_rows(bundle, scope=scope)
+    coverage = selected.groupby(["proxy", "fraction"]).agg(
+        population=("population", "first"), budget=("budget", "first"),
+        minimum_coverage=("valid_label_coverage", "min"), maximum_unknown_per_method=("unknown_count", "max"))
+    products = {"coverage_audit.csv": coverage.reset_index(), "source_report_audit.csv": source_audit,
+                "budget_winners.csv": budget_winners(bundle, scope=scope), "selected_scope_metrics.csv": selected,
+                "selection_overlap.csv": overlap_table(bundle, scope=scope)}
     for proxy in bundle.proxies:
-        products[proxy + "_primary.csv"] = primary_table(bundle, proxy)
+        products[proxy + "_primary.csv"] = primary_table(bundle, proxy, scope=scope)
+        products[proxy + "_exclusive_cohorts.csv"] = cohort_table(bundle, proxy, scope=scope)
     if "proxy_consensus" in bundle.tables:
-        products["consensus_primary.csv"] = consensus_table(bundle)
+        products["consensus_primary.csv"] = consensus_table(bundle, scope=scope)
     for name, table in products.items():
         table.to_csv(directory / name, index=False)
     write_json(directory / "analysis_provenance.json", {
         "report_receipt_sha256": sha256(bundle.directory / "complete.json"),
         "analysis_source_sha256": sha256(Path(__file__)), "proxies": list(bundle.proxies),
-        "primary": {"scope": "pooled turn selections", "policy": "unique_refill", "fraction": .01, "threshold": .1},
+        "primary": {"scope": scope, "policy": "unique_refill", "fraction": .01, "threshold": .1,
+                    "aggregation": "sum successes/sum evaluated; never average percentages",
+                    "uniqueness": "within each batch" if scope == "batch_aggregate" else "within each ten-folder group"},
+        "aggregation_source_sha256": sha256(Path(__file__).with_name("aggregation.py")),
         "derived_tables": {name: sha256(directory / name) for name in products}})

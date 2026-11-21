@@ -260,7 +260,7 @@ class PipelineIntegration(unittest.TestCase):
             self.assertEqual(pd.read_csv(out / "candidates.csv").eligible.sum(), 12)
             self.assertEqual(np.load(out / "candidate_embeddings.npy").shape, (12, 16))
             metrics = pd.read_csv(out / "reports/metrics.csv")
-            self.assertEqual(set(metrics.scope), {"turn", "batch", "pooled"})
+            self.assertEqual(set(metrics.scope), {"turn", "batch", "pooled", "batch_aggregate"})
             self.assertTrue((metrics.valid_label_coverage.dropna() == 1).all())
             self.assertTrue((out / "reports/REPORT.md").is_file())
             self.assertTrue((out / "reports/proxy_consensus.csv").is_file())
